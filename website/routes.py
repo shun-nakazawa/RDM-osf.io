@@ -78,6 +78,7 @@ def get_globals():
         'project_registrations': settings.to_bool('PROJECT_REGISTRATIONS', True),
         'project_makepublic': settings.to_bool('PROJECT_MAKEPUBLIC', True),
         'osf_page_name': unicode(settings.OSF_PAGE_NAME, 'utf-8'),
+        'use_tfa': settings.to_bool('USE_TFA', True),
         ''
         'private_link_anonymous': is_private_link_anonymous_view(),
         'user_name': user.username if user else '',
@@ -1325,7 +1326,6 @@ def make_url_map(app):
                 '/project/<pid>/node/<nid>/timestamp/',
             ],
             ['get', 'post'],
-            #project_views.timestamp.collect_timestamp_trees,
             project_views.timestamp.get_init_timestamp_error_data_list,
             OsfWebRenderer('project/timestamp.mako', trust=False),
         ),

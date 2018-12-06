@@ -1,4 +1,4 @@
-FROM python:2.7-slim
+FROM python:2.7-slim-jessie
 
 ENV GOSU_VERSION=1.10 \
     NODE_ENV=production \
@@ -222,5 +222,10 @@ RUN for module in \
         touch $file && chmod o+w $file \
     ; done \
     && rm ./website/settings/local.py ./api/base/settings/local.py ./api/timestamp/local.py
+
+RUN invoke requirements --quick
+RUN invoke assets --dev
+
+RUN invoke admin.assets --dev
 
 CMD ["gosu", "nobody", "invoke", "--list"]
