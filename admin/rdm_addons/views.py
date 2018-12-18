@@ -18,6 +18,7 @@ from . import utils
 from website.routes import make_url_map
 from website.app import init_addons, attach_handlers
 
+# TODO: Why create custom `init_app` ?
 def init_app():
     from framework.flask import app
     try:
@@ -91,6 +92,7 @@ class AddonListView(RdmPermissionMixin, UserPassesTestMixin, TemplateView):
             institution = get_dummy_institution()
         ctx['institution'] = institution
 
+        # TODO: Why use `test_request_context` ?
         with app.test_request_context():
             ctx['addon_settings'] = utils.get_addons_by_config_type('accounts', self.request.user)
             accounts_addons = [addon for addon in website_settings.ADDONS_AVAILABLE

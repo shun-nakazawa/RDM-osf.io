@@ -41,10 +41,12 @@ var config = Object.assign({}, common, {
         'metrics-page': staticAdminPath('js/pages/metrics-page.js'),
         'maintenance': staticAdminPath('js/maintenance/maintenance.js'),
         'rdm-addons-page': staticAdminPath('js/rdm_addons/rdm-addons-page.js'),
+        // TODO: Magic number
         'rdm-dataverse-cfg': staticAdminPath('js/rdm_addons/dataverse/rdm-cfg.js'),
         'rdm-s3-cfg': staticAdminPath('js/rdm_addons/s3/rdm-cfg.js'),
         'rdm-owncloud-cfg': staticAdminPath('js/rdm_addons/owncloud/rdm-cfg.js'),
         'rdm-figshare-cfg': staticAdminPath('js/rdm_addons/figshare/rdm-cfg.js'),
+        'rdm-azureblobstorage-cfg': staticAdminPath('js/rdm_addons/azureblobstorage/rdm-cfg.js'),
         'rdm-timestampsettings-page': staticAdminPath('js/rdm_timestampsettings/rdm-timestampsettings-page.js'),
         'rdm-timestampadd-page': staticAdminPath('js/rdm_timestampadd/rdm-timestampadd-page.js'),
         'rdm-keymanagement-page': staticAdminPath('js/rdm_keymanagement/rdm-keymanagement-page.js'),

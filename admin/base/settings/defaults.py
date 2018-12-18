@@ -126,7 +126,7 @@ INSTALLED_APPS = (
     'addons.s3',
     'addons.zotero',
     #     'addons.swift',
-    #     'addons.azureblobstorage',
+    'addons.azureblobstorage',
     #     'addons.weko',
 )
 
@@ -149,7 +149,7 @@ MIGRATION_MODULES = {
     'addons_s3': None,
     'addons_zotero': None,
     #    'addons.swift': None,
-    #    'addons.azureblobstorage': None,
+   'addons.azureblobstorage': None,
     #    'addons.weko': None,
 }
 
