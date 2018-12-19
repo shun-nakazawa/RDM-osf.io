@@ -3,45 +3,35 @@
 import httplib
 
 from django.core.exceptions import ValidationError
-
 from framework.exceptions import HTTPError
+
 from osf.models import ExternalAccount
 from admin.rdm_addons.utils import get_rdm_addon_option
-from addons.s3.views import SHORT_NAME, FULL_NAME
+
+from addons.s3.models import S3Provider
 from addons.s3.utils import get_user_info, can_list
 
 
 def add_account(json_request, institution_id, addon_name):
-    try:
-        access_key = json_request['access_key']
-        secret_key = json_request['secret_key']
-    except KeyError:
-        raise HTTPError(httplib.BAD_REQUEST)
+    _validate_request(json_request)
+    access_key = json_request['access_key']
+    secret_key = json_request['secret_key']
 
-    if not (access_key and secret_key):
-        return {
-            'message': 'All the fields above are required.'
-        }, httplib.BAD_REQUEST
+    _check_authentication(access_key, secret_key)
+    account = _add_external_account(access_key, secret_key)
+    _add_external_account_option(institution_id, addon_name, account)
 
+    return {}, httplib.OK
+
+
+def _add_external_account(access_key, secret_key):
     user_info = get_user_info(access_key, secret_key)
-    if not user_info:
-        return {
-            'message': ('Unable to access account.\n'
-                'Check to make sure that the above credentials are valid, '
-                'and that they have permission to list buckets.')
-        }, httplib.BAD_REQUEST
+    provider = S3Provider()
 
-    if not can_list(access_key, secret_key):
-        return {
-            'message': ('Unable to list buckets.\n'
-                'Listing buckets is required permission that can be changed via IAM')
-        }, httplib.BAD_REQUEST
-
-    account = None
     try:
         account = ExternalAccount(
-            provider=SHORT_NAME,
-            provider_name=FULL_NAME,
+            provider=provider.short_name,
+            provider_name=provider.name,
             oauth_key=access_key,
             oauth_secret=secret_key,
             provider_id=user_info.id,
@@ -51,17 +41,41 @@ def add_account(json_request, institution_id, addon_name):
     except ValidationError:
         # ... or get the old one
         account = ExternalAccount.objects.get(
-            provider=SHORT_NAME,
+            provider=provider.short_name,
             provider_id=user_info.id
         )
         if account.oauth_key != access_key or account.oauth_secret != secret_key:
             account.oauth_key = access_key
             account.oauth_secret = secret_key
             account.save()
-    assert account is not None
 
+    return account
+
+
+def _add_external_account_option(institution_id, addon_name, account):
     rdm_addon_option = get_rdm_addon_option(institution_id, addon_name)
     if not rdm_addon_option.external_accounts.filter(id=account.id).exists():
         rdm_addon_option.external_accounts.add(account)
 
-    return {}, httplib.OK
+
+def _check_authentication(access_key, secret_key):
+    if not get_user_info(access_key, secret_key):
+        message = 'Unable to access account.\n'
+        'Check to make sure that the above credentials are valid, '
+        'and that they have permission to list buckets.'
+        raise HTTPError(httplib.BAD_REQUEST, message)
+    if not can_list(access_key, secret_key):
+        message = 'Unable to list buckets.\n'' \
+        ''Listing buckets is required permission that can be changed via IAM'
+        raise HTTPError(httplib.BAD_REQUEST, message)
+
+
+def _validate_request(json_request):
+    if 'access_key' not in json_request or \
+            not isinstance(json_request['access_key'], str) or \
+            len(json_request['access_key']) == 0:
+        raise HTTPError(httplib.BAD_REQUEST)
+    if 'secret_key' not in json_request or \
+            not isinstance(json_request['secret_key'], str) or \
+            len(json_request['secret_key']) == 0:
+        raise HTTPError(httplib.BAD_REQUEST)

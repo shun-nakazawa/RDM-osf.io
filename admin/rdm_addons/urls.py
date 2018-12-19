@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     url(r'^$', views.InstitutionListView.as_view(), name='institutions'),
     url(r'^(?P<institution_id>-?[0-9]+)/$', views.AddonListView.as_view(), name='addons'),
+    # TODO: url is strange : ".../1" and ".../0"
     url(r'^allow/(?P<addon_name>\w+)/(?P<institution_id>-?[0-9]+)/(?P<allowed>[01])$', views.AddonAllowView.as_view(), name='allow'),
     url(r'^force/(?P<addon_name>\w+)/(?P<institution_id>-?[0-9]+)/(?P<forced>[01])$', views.AddonForceView.as_view(), name='force'),
     url(r'^icon/(?P<addon_name>\w+)/(?P<icon_filename>\w+\.\w+)$', views.IconView.as_view(), name='icon'),

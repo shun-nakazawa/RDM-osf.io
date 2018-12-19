@@ -16,6 +16,7 @@ from osf.models import ExternalAccount
 from admin.rdm.utils import RdmPermissionMixin
 from admin.rdm_addons.utils import get_rdm_addon_option
 from framework.auth import Auth
+from framework.exceptions import HTTPError
 
 
 class OAuthView(RdmPermissionMixin, UserPassesTestMixin, View):
@@ -169,13 +170,24 @@ def add_extra_info(ret, addon_name):
     return ret
 
 def add_account(json_request, institution_id, addon_name):
-    if addon_name == 'dataverse':
-        from admin.rdm_addons.api_v1.add.dataverse import add_account
-        return add_account(json_request, institution_id, addon_name)
-    elif addon_name == 's3':
-        from admin.rdm_addons.api_v1.add.s3 import add_account
-        return add_account(json_request, institution_id, addon_name)
-    elif addon_name == 'owncloud':
-        from admin.rdm_addons.api_v1.add.owncloud import add_account
-        return add_account(json_request, institution_id, addon_name)
+    try:
+        if addon_name == 'dataverse':
+            from admin.rdm_addons.api_v1.add.dataverse import add_account
+            return add_account(json_request, institution_id, addon_name)
+        elif addon_name == 's3':
+            from admin.rdm_addons.api_v1.add.s3 import add_account
+            return add_account(json_request, institution_id, addon_name)
+        elif addon_name == 'owncloud':
+            from admin.rdm_addons.api_v1.add.owncloud import add_account
+            return add_account(json_request, institution_id, addon_name)
+        elif addon_name == 'azureblobstorage':
+            from admin.rdm_addons.api_v1.add.azureblobstorage import add_account
+            return add_account(json_request, institution_id, addon_name)
+    except HTTPError as err:
+        err_data = err.to_data()
+        res = {'message_short': err_data['message_short'], 'message_long': err_data['message_long']}
+        if err.message is not None:
+            res['message'] = err.message
+        code = err.code if err.code is not None else httplib.INTERNAL_SERVER_ERROR
+        return res, code
     return {'message': 'unknown addon "{}"'.format(addon_name)}, httplib.BAD_REQUEST
