@@ -126,7 +126,7 @@ INSTALLED_APPS = (
     'addons.s3',
     'addons.zotero',
     #     'addons.swift',
-    'addons.azureblobstorage',
+    'addons_azureblobstorage',
     #     'addons.weko',
 )
 
