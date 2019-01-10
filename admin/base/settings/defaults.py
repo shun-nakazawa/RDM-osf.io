@@ -125,9 +125,13 @@ INSTALLED_APPS = (
     'addons.owncloud',
     'addons.s3',
     'addons.zotero',
-    #     'addons.swift',
-    'addons_azureblobstorage',
-    #     'addons.weko',
+    'addons.swift',
+    'addons.azureblobstorage',
+    'addons.weko',
+    'addons.s3compat',
+    'addons.nextcloud',
+    'addons.gitlab',
+    'addons.onedrive'
 )
 
 MIGRATION_MODULES = {
@@ -148,9 +152,13 @@ MIGRATION_MODULES = {
     'addons_owncloud': None,
     'addons_s3': None,
     'addons_zotero': None,
-    #    'addons.swift': None,
-   'addons.azureblobstorage': None,
-    #    'addons.weko': None,
+    'addons_swift': None,
+    'addons_azureblobstorage': None,
+    'addons_weko': None,
+    'addons_s3compat': None,
+    'addons_nextcloud': None,
+    'addons_gitlab': None,
+    'addons_onedrive': None
 }
 
 USE_TZ = True
