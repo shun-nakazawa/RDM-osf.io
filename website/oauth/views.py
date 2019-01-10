@@ -11,6 +11,8 @@ from website.oauth.utils import get_service
 from website.oauth.signals import oauth_complete
 from requests.exceptions import ConnectionError
 
+from admin.rdm_addons.decorators import must_be_rdm_addons_allowed
+
 
 @must_be_logged_in
 def oauth_disconnect(external_account_id, auth):
@@ -35,6 +37,7 @@ def oauth_disconnect(external_account_id, auth):
     user.save()
 
 @must_be_logged_in
+@must_be_rdm_addons_allowed()
 def oauth_connect(service_name, auth):
     service = get_service(service_name)
 
@@ -42,6 +45,7 @@ def oauth_connect(service_name, auth):
 
 
 @must_be_logged_in
+@must_be_rdm_addons_allowed()
 def osf_oauth_callback(service_name, auth):
     user = auth.user
     provider = get_service(service_name)
