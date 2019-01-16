@@ -162,6 +162,7 @@ MIGRATION_MODULES = {
 }
 
 UNSUPPORTED_FORCE_TO_USE_ADDONS = [
+    'azureblobstorage',
     'swift',
     'weko',
     's3compat',
