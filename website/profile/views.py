@@ -32,6 +32,7 @@ from website.util.time import throttle_period_expired
 from website.util import api_v2_url, web_url_for, paths
 from website.util.sanitize import escape_html
 from addons.base import utils as addon_utils
+from admin.rdm_addons.decorators import must_be_rdm_addons_allowed_all
 
 logger = logging.getLogger(__name__)
 
@@ -463,6 +464,7 @@ def collect_user_config_js(addon_configs):
 
 
 @must_be_logged_in
+@must_be_rdm_addons_allowed_all
 def user_choose_addons(**kwargs):
     auth = kwargs['auth']
     json_data = escape_html(request.get_json())

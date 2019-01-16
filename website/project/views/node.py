@@ -52,6 +52,7 @@ from addons.wiki.utils import serialize_wiki_widget
 from addons.dataverse.utils import serialize_dataverse_widget
 from addons.forward.utils import serialize_forward_widget
 from addons.jupyterhub.utils import serialize_jupyterhub_widget
+from admin.rdm_addons.decorators import must_be_rdm_addons_allowed_all
 
 r_strip_html = lambda collection: rapply(collection, strip_html)
 logger = logging.getLogger(__name__)
@@ -401,6 +402,7 @@ def collect_node_config_js(addons):
 
 @must_have_permission(WRITE)
 @must_not_be_registration
+@must_be_rdm_addons_allowed_all
 def node_choose_addons(auth, node, **kwargs):
     node.config_addons(request.json, auth)
 
