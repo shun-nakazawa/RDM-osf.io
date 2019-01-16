@@ -10,6 +10,7 @@ from osf.models import RdmAddonOption, RdmAddonNoInstitutionOption
 from website import settings
 from admin.base.settings import BASE_DIR
 from admin.rdm.utils import get_institution_id
+from admin.base.settings import UNSUPPORTED_FORCE_TO_USE_ADDONS
 
 def get_institusion_settings_template(config):
     """get template file settings"""
@@ -30,6 +31,7 @@ def get_addon_template_config(config, user):
         'institution_settings_template': get_institusion_settings_template(config),
         'is_enabled': user_addon is not None,
         'addon_icon_url': reverse('addons:icon', args=[config.short_name, config.icon]),
+        'is_supported_force_to_use': config.short_name not in UNSUPPORTED_FORCE_TO_USE_ADDONS,
     }
     ret.update(user_addon.to_json(user) if user_addon else {})
     return ret

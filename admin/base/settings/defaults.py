@@ -161,6 +161,15 @@ MIGRATION_MODULES = {
     'addons_onedrive': None
 }
 
+UNSUPPORTED_FORCE_TO_USE_ADDONS = [
+    'swift',
+    'weko',
+    's3compat',
+    'nextcloud',
+    'gitlab',
+    'onedrive'
+]
+
 USE_TZ = True
 TIME_ZONE = 'UTC'
 
