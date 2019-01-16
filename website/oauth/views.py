@@ -12,8 +12,6 @@ from website.oauth.signals import oauth_complete
 from requests.exceptions import ConnectionError
 from admin.rdm_addons.utils import validate_rdm_addons_allowed
 
-from admin.rdm_addons.decorators import must_be_rdm_addons_allowed
-
 
 @must_be_logged_in
 def oauth_disconnect(external_account_id, auth):
@@ -53,7 +51,6 @@ def oauth_connect(service_name, auth):
 
 
 @must_be_logged_in
-@must_be_rdm_addons_allowed()
 def osf_oauth_callback(service_name, auth):
     try:
         validate_rdm_addons_allowed(auth, service_name)
