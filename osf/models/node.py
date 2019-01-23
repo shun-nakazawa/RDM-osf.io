@@ -42,6 +42,7 @@ from osf.models.private_link import PrivateLink
 from osf.models.spam import SpamMixin
 from osf.models.tag import Tag
 from osf.models.user import OSFUser
+from osf.models.user import CGGroup
 from osf.models.validators import validate_doi, validate_title
 from framework.auth.core import Auth, get_user
 from osf.utils.datetime_aware_jsonfield import DateTimeAwareJSONField
@@ -413,10 +414,37 @@ class AbstractNode(DirtyFieldsMixin, TypedModel, AddonModelMixin, IdentifierMixi
 
     keenio_read_key = models.CharField(max_length=1000, null=True, blank=True)
 
+    # Group from Cloud Gateway
+    group = models.OneToOneField(CGGroup,
+                                 on_delete=models.SET_NULL,
+                                 null=True, blank=True)
+
+    def title_with_group(self, title):
+        value = title
+        if self.group is not None:
+            # Group-name from isMemberOf is added in project-title.
+            import re
+            m = re.match('.+ \[' + self.group + '\]$', value)
+            if m is None:
+                value = value + ' [' + self.group + ']'
+        return value
+
+    #def __getattr__(self, name):
+    #    value = object.__getattr__(self, name)
+    #    if name == 'title':
+    #        value = self.title_with_group(value)
+    #    return value
+
+    #def __setattr__(self, name, value):
+    #    if name == 'title':
+    #        value = self.title_with_group(value)
+    #    return object.__setattr__(self, name, value)
+
     def __init__(self, *args, **kwargs):
         self._parent = kwargs.pop('parent', None)
         self._is_templated_clone = False
         super(AbstractNode, self).__init__(*args, **kwargs)
+        #self.title = self.title  # re-set to call __setattr__()
 
     def __unicode__(self):
         return ('(title={self.title!r}, category={self.category!r}) '
@@ -585,7 +613,7 @@ class AbstractNode(DirtyFieldsMixin, TypedModel, AddonModelMixin, IdentifierMixi
     # For Comment API compatibility
     @property
     def target_type(self):
-        """The object "type" used in the OSF v2 API."""
+        """The object "type" used in the GakuNin RDM v2 API."""
         return 'nodes'
 
     @property
@@ -667,7 +695,7 @@ class AbstractNode(DirtyFieldsMixin, TypedModel, AddonModelMixin, IdentifierMixi
                 contributor.csl_name(self._id)  # method in auth/model.py which parses the names of authors
                 for contributor in self.visible_contributors
             ],
-            'publisher': 'Open Science Framework',
+            'publisher': 'GakuNin RDM',
             'type': 'webpage',
             'URL': self.display_absolute_url,
         }
@@ -2944,7 +2972,7 @@ class Node(AbstractNode):
         return False
 
     class Meta:
-        # custom permissions for use in the OSF Admin App
+        # custom permissions for use in the GakuNin RDM Admin App
         permissions = (
             ('view_node', 'Can view node details'),
         )

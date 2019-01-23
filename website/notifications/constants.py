@@ -23,7 +23,7 @@ NOTIFICATION_TYPES = {
 
 # Formatted file provider names for notification emails
 PROVIDERS = {
-    'osfstorage': 'OSF Storage',
+    'osfstorage': 'NII Storage',
     'box': 'Box',
     'dataverse': 'Dataverse',
     'dropbox': 'Dropbox',
@@ -34,5 +34,11 @@ PROVIDERS = {
     'googledrive': 'Google Drive',
     'owncloud': 'ownCloud',
     'onedrive': 'Microsoft OneDrive',
-    's3': 'Amazon S3'
+    's3': 'Amazon S3',
+    'swift': 'OpenStack Swift',
+    'azureblobstorage': 'Azure Blob Storage',
+    'weko': 'WEKO'
 }
+# install-addons.py
+PROVIDERS['s3compat'] = 'S3 Compatible Storage'
+PROVIDERS['nextcloud'] = 'Nextcloud'

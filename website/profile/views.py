@@ -13,6 +13,7 @@ from framework import sentry
 from framework.auth import utils as auth_utils
 from framework.auth.decorators import collect_auth
 from framework.auth.decorators import must_be_logged_in
+from framework.auth.decorators import must_be_logged_in_without_checking_email
 from framework.auth.decorators import must_be_confirmed
 from framework.auth.exceptions import ChangePasswordError
 from framework.auth.views import send_confirm_email
@@ -84,6 +85,20 @@ def resend_confirmation(auth):
     return _profile_view(user, is_profile=True)
 
 @must_be_logged_in
+def extend_profile_view(auth, **kwargs):
+    user = auth.user
+    user_addons = addon_utils.get_addons_by_config_type('user', user)
+
+    return {
+        'user_id': user._id,
+        'addons': user_addons,
+        'addons_js': collect_user_config_js([addon for addon in settings.ADDONS_AVAILABLE if 'user' in addon.configs]),
+        'addons_css': [],
+        'requested_deactivation': user.requested_deactivation,
+        'external_identity': user.external_identity
+    }
+
+@must_be_logged_in_without_checking_email
 def update_user(auth):
     """Update the logged-in user's profile."""
 
@@ -156,9 +171,9 @@ def update_user(auth):
             (
                 each for each in data['emails']
                 # email is primary
-                if each.get('primary') and each.get('confirmed')
+                if each.get('primary') and each.get('confirmed') and
                 # an address is specified (can't trust those sneaky users!)
-                and each.get('address')
+                each.get('address')
             )
         )
 
@@ -226,7 +241,7 @@ def _profile_view(profile, is_profile=False, include_node_counts=False):
         return ret
     raise HTTPError(http.NOT_FOUND)
 
-@must_be_logged_in
+@must_be_logged_in_without_checking_email
 def profile_view_json(auth):
     return _profile_view(auth.user, True)
 
@@ -239,7 +254,7 @@ def profile_view_id_json(uid, auth):
     # Do NOT embed nodes, they aren't necessary
     return _profile_view(user, is_profile)
 
-@must_be_logged_in
+@must_be_logged_in_without_checking_email
 def profile_view(auth):
     # Embed node data, so profile node lists can be rendered
     return _profile_view(auth.user, True, include_node_counts=True)
@@ -277,6 +292,22 @@ def user_account(auth, **kwargs):
     }
 
 
+@must_be_logged_in_without_checking_email
+def user_account_email(auth, **kwargs):
+    user = auth.user
+    user_addons = addon_utils.get_addons_by_config_type('user', user)
+
+    return {
+        'eppn': user.eppn,
+        'user_id': user._id,
+        'addons': user_addons,
+        'addons_js': collect_user_config_js([addon for addon in settings.ADDONS_AVAILABLE if 'user' in addon.configs]),
+        'addons_css': [],
+        'requested_deactivation': user.requested_deactivation,
+        'external_identity': user.external_identity
+    }
+
+
 @must_be_logged_in
 def user_account_password(auth, **kwargs):
     user = auth.user
@@ -304,7 +335,14 @@ def user_addons(auth, **kwargs):
     ret = {
         'addon_settings': addon_utils.get_addons_by_config_type('accounts', user),
     }
-    accounts_addons = [addon for addon in settings.ADDONS_AVAILABLE if 'accounts' in addon.configs]
+    # RDM
+    from admin.rdm_addons import utils as rdm_utils
+    rdm_utils.update_with_rdm_addon_settings(ret['addon_settings'], user)
+    allowed_addon_dict = {addon['addon_short_name']: addon['is_allowed'] for addon in ret['addon_settings']}
+    ret['addon_settings'] = [addon for addon in ret['addon_settings'] if addon['is_allowed']]
+
+    accounts_addons = [addon for addon in settings.ADDONS_AVAILABLE
+            if 'accounts' in addon.configs and allowed_addon_dict[addon.short_name]]
     ret.update({
         'addon_enabled_settings': [addon.short_name for addon in accounts_addons],
         'addons_js': collect_user_config_js(accounts_addons),
@@ -436,7 +474,7 @@ def user_choose_mailing_lists(auth, **kwargs):
 
         Example input:
         {
-            "Open Science Framework General": true,
+            "GakuNin RDM General": true,
             ...
         }
 
@@ -484,7 +522,7 @@ def update_mailchimp_subscription(user, list_name, subscription, send_goodbye=Tr
 
 
 def mailchimp_get_endpoint(**kwargs):
-    """Endpoint that the mailchimp webhook hits to check that the OSF is responding"""
+    """Endpoint that the mailchimp webhook hits to check that the GakuNin RDM is responding"""
     return {}, http.OK
 
 
@@ -516,7 +554,7 @@ def sync_data_from_mailchimp(**kwargs):
     else:
         # TODO: get tests to pass with sentry logging
         # sentry.log_exception()
-        # sentry.log_message("Unauthorized request to the OSF.")
+        # sentry.log_message("Unauthorized request to the GakuNin RDM.")
         raise HTTPError(http.UNAUTHORIZED)
 
 

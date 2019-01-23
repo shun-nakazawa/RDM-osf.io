@@ -109,7 +109,10 @@ from addons.wiki.models import NodeWikiPage
 from website import mails
 from website.exceptions import NodeStateError
 from website.util.permissions import ADMIN, PERMISSIONS
+from osf.models import RdmTimestampGrantPattern
 
+import logging
+logger = logging.getLogger(__name__)
 
 class NodeMixin(object):
     """Mixin with convenience methods for retrieving the current node based on the
@@ -126,6 +129,12 @@ class NodeMixin(object):
             # If this is an embedded request, the node might be cached somewhere
             node = self.request.parents[Node].get(self.kwargs[self.node_lookup_url_kwarg])
 
+        try:
+            timestamp_pattern = RdmTimestampGrantPattern.objects.get(node_guid=self.kwargs['node_id'])
+            timestamp_pattern.timestamp_pattern_division = int(self.request.data['timestampPattern'])
+            timestamp_pattern.save()
+        except Exception:
+            pass
         if node is None:
             node = get_object_or_error(
                 Node,
@@ -267,7 +276,6 @@ class NodeList(JSONAPIBaseView, bulk_views.BulkUpdateJSONAPIView, bulk_views.Bul
         drf_permissions.IsAuthenticatedOrReadOnly,
         base_permissions.TokenHasScope,
     )
-
     required_read_scopes = [CoreScopes.NODE_BASE_READ]
     required_write_scopes = [CoreScopes.NODE_BASE_WRITE]
     model_class = apps.get_model('osf.AbstractNode')
@@ -298,6 +306,7 @@ class NodeList(JSONAPIBaseView, bulk_views.BulkUpdateJSONAPIView, bulk_views.Bul
             for node in nodes:
                 if not node.can_edit(auth):
                     raise PermissionDenied
+
             return nodes
         else:
             return self.get_queryset_from_request()
@@ -432,7 +441,7 @@ class NodeDetail(JSONAPIBaseView, generics.RetrieveUpdateDestroyAPIView, NodeMix
 
     ###Node Links
 
-    List of links (pointers) to other nodes on the OSF.  Node links can be added through this endpoint.
+    List of links (pointers) to other nodes on the GakuNin RDM.  Node links can be added through this endpoint.
 
     ###Parent
 
@@ -459,7 +468,7 @@ class NodeDetail(JSONAPIBaseView, generics.RetrieveUpdateDestroyAPIView, NodeMix
     ##Links
 
         self:  the canonical api endpoint of this node
-        html:  this node's page on the OSF website
+        html:  this node's page on the GakuNin RDM website
 
     ##Actions
 
@@ -666,7 +675,7 @@ class NodeContributorsList(BaseContributorList, bulk_views.BulkUpdateJSONAPIView
         else:
             return NodeContributorsSerializer
 
-    # overrides ListBulkCreateJSONAPIView, BulkUpdateJSONAPIView
+    # overrides ListBulkCreateJSON APIView, BulkUpdateJSONAPIView
     def get_queryset(self):
         queryset = self.get_queryset_from_request()
         # If bulk request, queryset only contains contributors in request
@@ -748,7 +757,7 @@ class NodeContributorDetail(BaseContributorDetail, generics.RetrieveUpdateDestro
     ##Links
 
         self:           the canonical api endpoint of this contributor
-        html:           the contributing user's page on the OSF website
+        html:           the contributing user's page on the GakuNin RDM website
         profile_image:  a url to the contributing user's profile image
 
     ##Actions
@@ -1303,7 +1312,7 @@ class NodeCitationDetail(JSONAPIBaseView, generics.RetrieveAPIView, NodeMixin):
         id                       string               unique ID for the citation
         title                    string               title of project or component
         author                   list                 list of authors for the work
-        publisher                string               publisher - most always 'Open Science Framework'
+        publisher                string               publisher - most always 'GakuNin RDM'
         type                     string               type of citation - web
         doi                      string               doi of the resource
 
@@ -1677,7 +1686,7 @@ class NodeFilesList(JSONAPIBaseView, generics.ListAPIView, WaterButlerMixin, Lis
     its `/links/info` attribute).
 
     When a create/update/delete action is performed against the file or folder, the action is handled by an external
-    service called WaterButler.  The WaterButler response format differs slightly from the OSF's.
+    service called WaterButler.  The WaterButler response format differs slightly from the GakuNin RDM's.
 
     <!--- Copied from FileDetail.Spiel -->
 
@@ -1700,7 +1709,7 @@ class NodeFilesList(JSONAPIBaseView, generics.ListAPIView, WaterButlerMixin, Lis
         modified                    timestamp         last modified timestamp - format depends on provider
         contentType                 string            MIME-type when available
         provider                    string            id of provider e.g. "osfstorage", "s3", "googledrive".
-                                                        equivalent to addon_short_name on the OSF
+                                                        equivalent to addon_short_name on the GakuNin RDM
         size                        integer           size of file in bytes
         current_version             integer           current file version
 
@@ -1868,7 +1877,7 @@ class NodeFilesList(JSONAPIBaseView, generics.ListAPIView, WaterButlerMixin, Lis
         Success:       200 OK or 201 Created + new entity representation
 
     Move and copy actions both use the same request structure, a POST to the `move` url, but with different values for
-    the `action` body parameters.  The `path` parameter is also required and should be the OSF `path` attribute of the
+    the `action` body parameters.  The `path` parameter is also required and should be the GakuNin RDM `path` attribute of the
     folder being written to.  The `rename` and `conflict` parameters are optional.  If you wish to change the name of
     the file or folder at its destination, set the `rename` parameter to the new name.  The `conflict` param governs how
     name clashes are resolved.  Possible values are `replace` and `keep`.  `replace` is the default and will overwrite
@@ -2266,17 +2275,17 @@ class NodeProvider(object):
 class NodeProvidersList(JSONAPIBaseView, generics.ListAPIView, NodeMixin):
     """List of storage providers enabled for this node. *Read-only*.
 
-    Users of the OSF may access their data on a [number of cloud-storage](/v2/#storage-providers) services that have
-    integrations with the OSF.  We call these "providers".  By default every node has access to the OSF-provided
+    Users of the GakuNin RDM may access their data on a [number of cloud-storage](/v2/#storage-providers) services that have
+    integrations with the GakuNin RDM.  We call these "providers".  By default every node has access to the GakuNin RDM-provided
     storage but may use as many of the supported providers as desired.  This endpoint lists all of the providers that are
-    configured for this node.  If you want to add more, you will need to do that in the Open Science Framework front end
+    configured for this node.  If you want to add more, you will need to do that in the GakuNin RDM front end
     for now.
 
-    In the OSF filesystem model, providers are treated as folders, but with special properties that distinguish them
+    In the GakuNin RDM filesystem model, providers are treated as folders, but with special properties that distinguish them
     from regular folders.  Every provider folder is considered a root folder, and may not be deleted through the regular
     file API.  To see the contents of the provider, issue a GET request to the `/relationships/files/links/related/href`
     attribute of the provider resource.  The `new_folder` and `upload` actions are handled by another service called
-    WaterButler, whose response format differs slightly from the OSF's.
+    WaterButler, whose response format differs slightly from the GakuNin RDM's.
 
     <!--- Copied from FileDetail.Spiel -->
 
@@ -2299,7 +2308,7 @@ class NodeProvidersList(JSONAPIBaseView, generics.ListAPIView, NodeMixin):
         modified      timestamp  last modified timestamp - format depends on provider
         contentType   string     MIME-type when available
         provider      string     id of provider e.g. "osfstorage", "s3", "googledrive".
-                                 equivalent to addon_short_name on the OSF
+                                 equivalent to addon_short_name on the GakuNin RDM
         size          integer    size of file in bytes
         extra         object     may contain additional data beyond what's described here,
                                  depending on the provider
@@ -2397,11 +2406,11 @@ class NodeProvidersList(JSONAPIBaseView, generics.ListAPIView, NodeMixin):
 
     def get_queryset(self):
         return [
-            self.get_provider_item(addon.config.short_name)
-            for addon
-            in self.get_node().get_addons()
-            if addon.config.has_hgrid_files
-            and addon.configured
+            self.get_provider_item(addon.config.short_name) for
+            addon in
+            self.get_node().get_addons() if
+            addon.config.has_hgrid_files and
+            addon.configured
         ]
 
 class NodeProviderDetail(JSONAPIBaseView, generics.RetrieveAPIView, NodeMixin):
@@ -2432,7 +2441,7 @@ class NodeLogList(JSONAPIBaseView, generics.ListAPIView, NodeMixin, ListFilterMi
 
     Note that if an anonymous view_only key is being used, the user relationship will not be exposed.
 
-    On the front end, logs show record and show actions done on the OSF. The complete list of loggable actions (in the format {identifier}: {description}) is as follows:
+    On the front end, logs show record and show actions done on the GakuNin RDM. The complete list of loggable actions (in the format {identifier}: {description}) is as follows:
 
     * 'project_created': A Node is created
     * 'project_registered': A Node is registered
@@ -2717,7 +2726,7 @@ class NodeInstitutionsList(JSONAPIBaseView, generics.ListAPIView, ListFilterMixi
         name           type               description
         =========================================================================
         name           string             title of the institution
-        id             string             unique identifier in the OSF
+        id             string             unique identifier in the GakuNin RDM
         logo_path      string             a path to the institution's static logo
 
 
@@ -2841,6 +2850,13 @@ class NodeInstitutionsRelationship(JSONAPIBaseView, generics.RetrieveUpdateDestr
     def create(self, *args, **kwargs):
         try:
             ret = super(NodeInstitutionsRelationship, self).create(*args, **kwargs)
+            # timestamp_pattern create
+            for data in self.request.data['data']:
+                institution_id = Institution.objects.get(_id=data['id']).id
+                guid = kwargs['node_id']
+                timestampPattern, _ = RdmTimestampGrantPattern.objects.get_or_create(
+                    institution_id=institution_id, node_guid=guid)
+                timestampPattern.save()
         except RelationshipPostMakesNoChanges:
             return Response(status=HTTP_204_NO_CONTENT)
         return ret
@@ -3461,7 +3477,7 @@ class NodePreprintsList(JSONAPIBaseView, generics.ListAPIView, NodeMixin, Prepri
     ##Links
 
     - `self` -- Preprint detail page for the current preprint
-    - `html` -- Project on the OSF corresponding to the current preprint
+    - `html` -- Project on the GakuNin RDM corresponding to the current preprint
     - `doi` -- URL representation of the DOI entered by the user for the preprint manuscript
 
     See the [JSON-API spec regarding pagination](http://jsonapi.org/format/1.0/#fetching-pagination).

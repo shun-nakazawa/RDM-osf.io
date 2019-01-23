@@ -75,6 +75,57 @@ def server(ctx, host=None, port=5000, debug=True, gitlogs=False):
 
 
 @task
+def reset_user(ctx, username=None):
+    from website.app import init_app
+    init_app(routes=False, set_backends=False)
+
+    from osf.models import OSFUser
+
+    if username is None:
+        print 'usage: invoke reset_user -u <username>'
+        print 'OSF users (username):'
+        for user in OSFUser.objects.all():
+            print user.username
+        return
+
+    try:
+        user = OSFUser.objects.get(username=username)
+    except Exception as ex:
+        print ex
+        user = None
+    if user is None:
+        print 'no such user: ' + username
+        return
+
+    try:
+        nodes = user.nodes.filter()
+    except Exception as ex:
+        print ex
+        nodes = None
+
+    if nodes is not None:
+        for node in nodes:
+            print 'Node Contributor: GUID={}, title={}'.format(node._id, node.title)
+
+    user.emails.filter(address=user.username).delete()
+
+    user.have_email = False
+
+    dummy = user.username
+    for i in range(1000):
+        dummy = '__dummy_' + str(i) + '__' + user.username
+        if not OSFUser.objects.filter(username=dummy).exists():
+            break
+
+    user.username = dummy.lower().strip()
+    user.emails.filter(address=user.username).delete()
+    if not user.emails.filter(address=user.username):
+        user.emails.create(address=user.username)
+    user.save()
+    print 'reset_user OK: ' + username
+
+
+@task
 def git_logs(ctx, branch=None):
     from scripts.meta import gatherer
     gatherer.main(branch=branch)
@@ -211,9 +262,9 @@ def rebuild_search(ctx):
 
 
 @task
-def mailserver(ctx, port=1025):
+def mailserver(ctx, host='localhost', port=1025):
     """Run a SMTP test server."""
-    cmd = 'python -m smtpd -n -c DebuggingServer localhost:{port}'.format(port=port)
+    cmd = 'python -m smtpd -n -c DebuggingServer {host}:{port}'.format(host=host, port=port)
     ctx.run(bin_prefix(cmd), pty=True)
 
 
@@ -354,7 +405,7 @@ ADMIN_TESTS = [
 
 @task
 def test_osf(ctx, numprocesses=None):
-    """Run the OSF test suite."""
+    """Run the GakuNin RDM test suite."""
     print('Testing modules "{}"'.format(OSF_TESTS))
     test_module(ctx, module=OSF_TESTS, numprocesses=numprocesses)
 

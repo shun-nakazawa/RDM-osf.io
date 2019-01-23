@@ -1671,7 +1671,7 @@ function expandStateLoad(item) {
         i;
 
     if (item.children.length > 0 && item.depth === 1) {
-        // NOTE: On the RPP and a few select projects *only*: Load the top-level project's OSF Storage
+        // NOTE: On the RPP *only*: Load the top-level project's NII Storage
         // but do NOT lazy-load children in order to save hundreds of requests.
         // TODO: We might want to do this for every project, but that's TBD.
         // /sloria
@@ -1690,7 +1690,7 @@ function expandStateLoad(item) {
 
     if (item.children.length > 0 && item.depth === 2) {
         for (i = 0; i < item.children.length; i++) {
-            if (item.children[i].data.isAddonRoot || item.children[i].data.addonFullName === 'OSF Storage' ) {
+            if (item.children[i].data.isAddonRoot || item.children[i].data.addonFullName === 'NII Storage' ) {
                 tb.updateFolder(null, item.children[i]);
             }
         }
@@ -2227,7 +2227,7 @@ var FGToolbar = {
                     onclick: function(event){
                         var mithrilContent = m('div', [
                             m('p', [ m('b', 'Select rows:'), m('span', ' Click on a row (outside the add-on, file, or folder name) to show further actions in the toolbar. Use Command or Shift keys to select multiple files.')]),
-                            m('p', [ m('b', 'Open files:'), m('span', ' Click a file name to go to view the file in the OSF.')]),
+                            m('p', [ m('b', 'Open files:'), m('span', ' Click a file name to go to view the file in the GakuNin RDM.')]),
                             m('p', [ m('b', 'Open files in new tab:'), m('span', ' Press Command (Ctrl in Windows) and click a file name to open it in a new tab.')]),
                             m('p', [ m('b', 'Download as zip:'), m('span', ' Click on the row of an add-on or folder and click the Download as Zip button in the toolbar.'), m('i', ' Not available for all storage add-ons.')]),
                             m('p', [ m('b', 'Copy files:'), m('span', ' Press Option (Alt in Windows) while dragging a file to a new folder or component.'), m('i', ' Only for contributors with write access.')])
@@ -3036,7 +3036,8 @@ Fangorn.Components = {
     input : FGInput,
     toolbar : FGToolbar,
     dropdown : FGDropdown,
-    toolbarModes : toolbarModes
+    toolbarModes : toolbarModes,
+    defaultItemButtons : FGItemButtons
 };
 
 Fangorn.ButtonEvents = {

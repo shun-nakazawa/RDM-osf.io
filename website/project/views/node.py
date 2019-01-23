@@ -8,7 +8,7 @@ from itertools import islice
 
 from flask import request
 from django.apps import apps
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Q, OuterRef, Exists, Subquery
 
 from framework import status
@@ -39,6 +39,7 @@ from website.project.metadata.utils import serialize_meta_schemas
 from osf.models import AbstractNode, PrivateLink, Contributor, Node, NodeRelation
 from osf.models.contributor import get_contributor_permissions
 from osf.models.licenses import serialize_node_license_record
+from osf.models import RdmTimestampGrantPattern
 from website import settings
 from website.views import find_bookmark_collection, validate_page_num
 from website.views import serialize_node_summary
@@ -50,6 +51,7 @@ from addons.zotero.provider import ZoteroCitationsProvider
 from addons.wiki.utils import serialize_wiki_widget
 from addons.dataverse.utils import serialize_dataverse_widget
 from addons.forward.utils import serialize_forward_widget
+from addons.jupyterhub.utils import serialize_jupyterhub_widget
 
 r_strip_html = lambda collection: rapply(collection, strip_html)
 logger = logging.getLogger(__name__)
@@ -278,6 +280,9 @@ def node_setting(auth, node, **kwargs):
         'project': 'Project'
     })
 
+    ret['group'] = node.group.name if node.group is not None else None
+    ret['can_delete'] = True if node.group is None else False
+
     return ret
 
 @must_be_valid_project
@@ -301,15 +306,47 @@ def node_addons(auth, node, **kwargs):
     # The page only needs to load enabled addons and it refreshes when a new addon is being enabled.
     ret['addon_js'] = collect_node_config_js([addon for addon in addon_settings if addon['enabled']])
 
-    return ret
+    try:
+        timestamp_pattern = RdmTimestampGrantPattern.objects.get(node_guid=node._id)
+        ret['timestamp_pattern_division'] = timestamp_pattern.timestamp_pattern_division
+    except ObjectDoesNotExist:
+        timestamp_pattern = None
 
+    return ret
+def get_timestamp_pattern_division(auth, node, **kwargs):
+    try:
+        timestamp_pattern = RdmTimestampGrantPattern.objects.get(node_guid=node._id)
+        timestamp_pattern_division = timestamp_pattern.timestamp_pattern_division
+    except ObjectDoesNotExist:
+        timestamp_pattern_division = None
+
+    return timestamp_pattern_division
 
 def serialize_addons(node, auth):
 
     addon_settings = []
     addons_available = [addon for addon in settings.ADDONS_AVAILABLE
-                        if addon not in settings.SYSTEM_ADDED_ADDONS['node']
-                        and addon.short_name not in ('wiki', 'forward', 'twofactor')]
+                        if addon not in settings.SYSTEM_ADDED_ADDONS['node'] and
+                        addon.short_name not in ('wiki', 'forward', 'twofactor')]
+
+### forced Admin Settings
+    from admin.rdm_addons.utils import update_with_rdm_addon_settings
+
+    owners_addons_available = sorted([
+        owners_addon
+        for owners_addon in settings.ADDONS_AVAILABLE
+        if 'node' in owners_addon.owners and
+        owners_addon.short_name not in settings.SYSTEM_ADDED_ADDONS['node'] and
+        owners_addon.short_name not in ['wiki', 'forward', 'twofactor']
+    ], key=lambda owners_addon: owners_addon.full_name.lower())
+    rdm_addon_settings = [{'addon_short_name': owners_addon.short_name} for owners_addon in owners_addons_available]
+    update_with_rdm_addon_settings(rdm_addon_settings, auth.user)
+    addons_allowed = [
+        addon['addon_short_name']
+        for addon in rdm_addon_settings
+        if (addon['is_allowed'] and not addon['is_forced']) or
+        (addon['is_allowed'] and addon['is_forced'] and addon['has_user_external_accounts'])
+    ]
 
     for addon in addons_available:
         addon_config = apps.get_app_config('addons_{}'.format(addon.short_name))
@@ -327,7 +364,8 @@ def serialize_addons(node, auth):
             node_json = node.get_addon(addon.short_name).to_json(auth.user)
             config.update(node_json)
 
-        addon_settings.append(config)
+        if addon.short_name in addons_allowed:
+            addon_settings.append(config)
 
     addon_settings = sorted(addon_settings, key=lambda addon: addon['full_name'].lower())
 
@@ -418,7 +456,8 @@ def view_project(auth, node, **kwargs):
         'mendeley': None,
         'zotero': None,
         'forward': None,
-        'dataverse': None
+        'dataverse': None,
+        'jupyterhub': None
     }
 
     if 'wiki' in ret['addons']:
@@ -439,6 +478,9 @@ def view_project(auth, node, **kwargs):
         node_addon = node.get_addon('mendeley')
         mendeley_widget_data = MendeleyCitationsProvider().widget(node_addon)
         addons_widget_data['mendeley'] = mendeley_widget_data
+
+    if 'jupyterhub' in ret['addons']:
+        addons_widget_data['jupyterhub'] = serialize_jupyterhub_widget(node)
 
     ret.update({'addons_widget_data': addons_widget_data})
     return ret
@@ -646,6 +688,12 @@ def _view_project(node, auth, primary=False,
     except Contributor.DoesNotExist:
         contributor = None
 
+    if node.group is not None and user.groups_sync is not None and not user.groups_sync.filter(name=node.group.name).exists():
+        from nii import project_sync
+        project_sync.project_sync_one(node, None)
+        user.groups_sync.add(node.group)  # checked
+        user.save()
+
     parent = node.find_readable_antecedent(auth)
     if user:
         bookmark_collection = find_bookmark_collection(user)
@@ -677,6 +725,7 @@ def _view_project(node, auth, primary=False,
     NodeRelation = apps.get_model('osf.NodeRelation')
 
     is_registration = node.is_registration
+    timestamp_pattern = get_timestamp_pattern_division(auth, node)
     data = {
         'node': {
             'disapproval_link': disapproval_link,
@@ -748,7 +797,8 @@ def _view_project(node, auth, primary=False,
             'is_preprint_orphan': node.is_preprint_orphan,
             'has_published_preprint': node.preprints.filter(is_published=True).exists() if node else False,
             'preprint_file_id': node.preprint_file._id if node.preprint_file else None,
-            'preprint_url': node.preprint_url
+            'preprint_url': node.preprint_url,
+            'timestamp_pattern_division': timestamp_pattern
         },
         'parent_node': {
             'exists': parent is not None,

@@ -75,7 +75,7 @@ def render_message(tpl_name, **context):
 
 def send_mail(to_addr, mail, mimetype='plain', from_addr=None, mailer=None, celery=True,
             username=None, password=None, callback=None, attachment_name=None, attachment_content=None, **context):
-    """Send an email from the OSF.
+    """Send an email from the GakuNin RDM.
     Example: ::
 
         from website import mails
@@ -98,6 +98,13 @@ def send_mail(to_addr, mail, mimetype='plain', from_addr=None, mailer=None, cele
     message = mail.text(**context) if mimetype in ('plain', 'txt') else mail.html(**context)
     # Don't use ttls and login in DEBUG_MODE
     ttls = login = not settings.DEBUG_MODE
+
+    if hasattr(settings, 'TO_EMAIL_FOR_DEBUG') and \
+       settings.TO_EMAIL_FOR_DEBUG is not None and \
+       settings.TO_EMAIL_FOR_DEBUG is not '':
+        subject = 'DEBUG:' + subject + ' (To:' + to_addr + ')'
+        to_addr = settings.TO_EMAIL_FOR_DEBUG
+
     logger.debug('Sending email...')
     logger.debug(u'To: {to_addr}\nFrom: {from_addr}\nSubject: {subject}\nMessage: {message}'.format(**locals()))
 
@@ -147,7 +154,7 @@ TEST = Mail('test', subject='A test email to ${name}', categories=['test'])
 # Emails for first-time login through external identity providers.
 EXTERNAL_LOGIN_CONFIRM_EMAIL_CREATE = Mail(
     'external_confirm_create',
-    subject='Open Science Framework Account Verification'
+    subject='GakuNin RDM Account Verification'
 )
 
 FORK_COMPLETED = Mail(
@@ -162,17 +169,17 @@ FORK_FAILED = Mail(
 
 EXTERNAL_LOGIN_CONFIRM_EMAIL_LINK = Mail(
     'external_confirm_link',
-    subject='Open Science Framework Account Verification'
+    subject='GakuNin RDM Account Verification'
 )
 EXTERNAL_LOGIN_LINK_SUCCESS = Mail(
     'external_confirm_success',
-    subject='Open Science Framework Account Verification Success'
+    subject='GakuNin RDM Account Verification Success'
 )
 
 # Sign up confirmation emails for OSF, native campaigns and branded campaigns
 INITIAL_CONFIRM_EMAIL = Mail(
     'initial_confirm',
-    subject='Open Science Framework Account Verification'
+    subject='GakuNin RDM Account Verification'
 )
 CONFIRM_EMAIL = Mail(
     'confirm',
@@ -180,19 +187,19 @@ CONFIRM_EMAIL = Mail(
 )
 CONFIRM_EMAIL_PREREG = Mail(
     'confirm_prereg',
-    subject='Open Science Framework Account Verification, Preregistration Challenge'
+    subject='GakuNin RDM Account Verification, Preregistration Challenge'
 )
 CONFIRM_EMAIL_ERPC = Mail(
     'confirm_erpc',
-    subject='Open Science Framework Account Verification, Election Research Preacceptance Competition'
+    subject='GakuNin RDM Account Verification, Election Research Preacceptance Competition'
 )
 CONFIRM_EMAIL_PREPRINTS = lambda name, provider: Mail(
     'confirm_preprints_{}'.format(name),
-    subject='Open Science Framework Account Verification, {}'.format(provider)
+    subject='GakuNin RDM Account Verification, {}'.format(provider)
 )
 CONFIRM_EMAIL_REGISTRIES_OSF = Mail(
     'confirm_registries_osf',
-    subject='Open Science Framework Account Verification, OSF Registries'
+    subject='GakuNin RDM Account Verification, OSF Registries'
 )
 
 # Merge account, add or remove email confirmation emails.
@@ -248,15 +255,15 @@ SPAM_USER_BANNED = Mail('spam_user_banned', subject='[OSF] Account flagged as sp
 
 CONFERENCE_SUBMITTED = Mail(
     'conference_submitted',
-    subject='Project created on Open Science Framework',
+    subject='Project created on GakuNin RDM',
 )
 CONFERENCE_INACTIVE = Mail(
     'conference_inactive',
-    subject='Open Science Framework Error: Conference inactive',
+    subject='GakuNin RDM Error: Conference inactive',
 )
 CONFERENCE_FAILED = Mail(
     'conference_failed',
-    subject='Open Science Framework Error: No files attached',
+    subject='GakuNin RDM Error: No files attached',
 )
 
 DIGEST = Mail(
@@ -365,12 +372,12 @@ ARCHIVE_SUCCESS = Mail(
 
 WELCOME = Mail(
     'welcome',
-    subject='Welcome to the Open Science Framework'
+    subject='Welcome to the GakuNin RDM'
 )
 
 WELCOME_OSF4I = Mail(
     'welcome_osf4i',
-    subject='Welcome to the Open Science Framework'
+    subject='Welcome to the GakuNin RDM'
 )
 
 PREREG_CHALLENGE_REJECTED = Mail(

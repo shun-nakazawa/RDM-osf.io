@@ -11,12 +11,14 @@ from framework.analytics import increment_user_activity_counters
 from osf.exceptions import InvalidTriggerError
 from osf.models.node_relation import NodeRelation
 from osf.models.nodelog import NodeLog
+from osf.models.filelog import FileLog
 from osf.models.tag import Tag
 from osf.utils.fields import NonNaiveDateTimeField
 from osf.utils.machines import ReviewsMachine
 from osf.utils.workflows import DefaultStates, DefaultTriggers
 from website.exceptions import NodeStateError
 from website import settings
+from api.base.rdmlogger import RdmLogger, rdmlog
 
 
 class Versioned(models.Model):
@@ -64,6 +66,7 @@ class Loggable(models.Model):
     last_logged = NonNaiveDateTimeField(db_index=True, null=True, blank=True, default=timezone.now)
 
     def add_log(self, action, params, auth, foreign_user=None, log_date=None, save=True, request=None):
+        global filelog
         AbstractNode = apps.get_model('osf.AbstractNode')
         user = None
         if auth:
@@ -77,6 +80,40 @@ class Loggable(models.Model):
             action=action, user=user, foreign_user=foreign_user,
             params=params, node=self, original_node=original_node
         )
+
+        if user:
+            try:
+                if (('file' in action) or ('check' in action) or ('osf_storage' in action)) and user._id:
+                    if action not in 'rename':
+                        filelog = FileLog(
+                            action=action, user=user, path=params['path'],
+                            project_id=self._id
+                        )
+                        if log_date:
+                            filelog.date = log_date
+                        filelog.save()
+                        ## RDM Logger ##
+                        if user._id and original_node.title and params['path']:
+                            rdmlogger = RdmLogger(rdmlog, {})
+                            rdmlogger.info('RDM Project', RDMINFO='FileLog', action=action, user=user._id, project=original_node.title, file_path=params['path'])
+                    else:
+                        if 'osfstorage' in params['source']['provider']:
+                            source_path = params['source']['materialized']
+                        else:
+                            source_path = params['source']['path']
+                        filelog = FileLog(
+                            action=action, user=user, path=source_path,
+                            project_id=self._id
+                        )
+                        if log_date:
+                            filelog.date = log_date
+                        filelog.save()
+                        ## RDM Logger ##
+                        if user._id and original_node.title and source_path:
+                            rdmlogger = RdmLogger(rdmlog, {})
+                            rdmlogger.info('RDM Project', RDMINFO='FileLog', action=action, user=user._id, project=original_node.title, file_path=source_path)
+            except KeyError:
+                print('KeyError')
 
         if log_date:
             log.date = log_date
@@ -424,6 +461,14 @@ class NodeLinkMixin(models.Model):
         if forked is None:
             raise ValueError('Could not fork node')
 
+        relation = NodeRelation.objects.get(
+            parent=self,
+            child=node,
+            is_node_link=True
+        )
+        relation.child = forked
+        relation.save()
+
         if hasattr(self, 'add_log'):
             # Add log
             self.add_log(
@@ -457,7 +502,7 @@ class CommentableMixin(object):
 
     @property
     def target_type(self):
-        """ The object "type" used in the OSF v2 API. E.g. Comment objects have the type 'comments'."""
+        """ The object "type" used in the GakuNin RDM v2 API. E.g. Comment objects have the type 'comments'."""
         raise NotImplementedError
 
     @property

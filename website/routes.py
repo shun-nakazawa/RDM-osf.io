@@ -50,7 +50,8 @@ from website.notifications import views as notification_views
 from website.ember_osf_web import views as ember_osf_web_views
 from website.closed_challenges import views as closed_challenges_views
 from website.identifiers import views as identifier_views
-
+from website.rdm_addons import views as rdm_addon_views
+from website.rdm_announcement import views as rdm_announcement_views
 
 def get_globals():
     """Context variables that are available for every template rendered by
@@ -68,6 +69,17 @@ def get_globals():
     else:
         request_login_url = request.url
     return {
+        'embedded_ds': settings.to_bool('USE_EMBEDDED_DS', False),
+        'nav_dropdown': settings.to_bool('NAV_DROPDOWN', True),
+        'nav_support': settings.to_bool('NAV_SUPPORT', True),
+        'home_simple': settings.to_bool('HOME_SIMPLE', False),
+        'pages_footer': settings.to_bool('PAGES_FOOTER', True),
+        'project_analytics': settings.to_bool('PROJECT_ANALYTICS', True),
+        'project_registrations': settings.to_bool('PROJECT_REGISTRATIONS', True),
+        'project_makepublic': settings.to_bool('PROJECT_MAKEPUBLIC', True),
+        'osf_page_name': unicode(settings.OSF_PAGE_NAME, 'utf-8'),
+        'use_tfa': settings.to_bool('USE_TFA', True),
+        ''
         'private_link_anonymous': is_private_link_anonymous_view(),
         'user_name': user.username if user else '',
         'user_full_name': user.fullname if user else '',
@@ -188,6 +200,17 @@ def sitemap_file(path):
         path,
         mimetype=mime
     )
+def firebase():
+    if os.path.exists(os.path.join(settings.STATIC_FOLDER,
+                                   'js/firebase-messaging-sw.js')):
+        firebase_file = 'js/firebase-messaging-sw.js'
+    else:
+        raise HTTPError(http.NOT_FOUND)
+    return send_from_directory(
+        settings.STATIC_FOLDER,
+        firebase_file,
+        mimetype='text/javascript'
+    )
 
 def ember_app(path=None):
     """Serve the contents of the ember application"""
@@ -219,7 +242,7 @@ def goodbye():
 
 
 def make_url_map(app):
-    """Set up all the routes for the OSF app.
+    """Set up all the routes for the GakuNin RDM app.
 
     :param app: A Flask/Werkzeug app to bind the rules to.
     """
@@ -270,6 +293,7 @@ def make_url_map(app):
         Rule('/favicon.ico', 'get', favicon, json_renderer),
         Rule('/robots.txt', 'get', robots, json_renderer),
         Rule('/sitemaps/<path>', 'get', sitemap_file, json_renderer),
+        Rule('/firebase-messaging-sw.js', 'get', firebase, json_renderer),
     ])
 
     # Ember Applications
@@ -527,8 +551,8 @@ def make_url_map(app):
 
         Rule(
             [
-                '/project/<pid>/comments/timestamps/',
-                '/project/<pid>/node/<nid>/comments/timestamps/',
+                '/project/<pid>/comments/timestamp/',
+                '/project/<pid>/node/<nid>/comments/timestamp/',
             ],
             'put',
             project_views.comment.update_comments_timestamp,
@@ -772,6 +796,13 @@ def make_url_map(app):
         ),
 
         Rule(
+            '/settings/account/email',
+            'get',
+            profile_views.user_account_email,
+            OsfWebRenderer('profile/add_email.mako', trust=False),
+        ),
+
+        Rule(
             '/settings/account/password',
             'post',
             profile_views.user_account_password,
@@ -938,6 +969,27 @@ def make_url_map(app):
             'put',
             profile_views.unserialize_schools,
             json_renderer
+        ),
+
+        Rule(
+            '/rdm/addons/',
+            'get',
+            rdm_addon_views.user_addons,
+            json_renderer,
+        ),
+        Rule(
+            '/rdm/addons/import/<addon_name>/',
+            'get',
+            rdm_addon_views.import_admin_account,
+            json_renderer,
+        ),
+
+        # rdm_announcement API routes
+        Rule(
+            '/firebase/usertoken/<uid>/<token>',
+            'post',
+            rdm_announcement_views.update_user_token,
+            json_renderer,
         ),
 
     ], prefix='/api/v1',)
@@ -1267,6 +1319,24 @@ def make_url_map(app):
             'get',
             addon_views.addon_view_or_download_quickfile,
             json_renderer
+        ),
+        Rule(
+            [
+                '/project/<pid>/timestamp/',
+                '/project/<pid>/node/<nid>/timestamp/',
+            ],
+            ['get', 'post'],
+            project_views.timestamp.get_init_timestamp_error_data_list,
+            OsfWebRenderer('project/timestamp.mako', trust=False),
+        ),
+        Rule(
+            [
+                '/project/<pid>/timestamp/json/',
+                '/project/<pid>/node/<nid>/timestamp/json/',
+            ],
+            ['get', 'post'],
+            project_views.timestamp.collect_timestamp_trees_to_json,
+            json_renderer,
         )
     ])
 
@@ -1629,13 +1699,34 @@ def make_url_map(app):
             'post',
             project_views.contributor.invite_contributor_post,
             json_renderer
-        )
+        ),
+
+        # Security
+        Rule(
+            [
+                '/project/<pid>/timestamp/timestamp_error_data/',
+                '/project/<pid>/node/<nid>/timestamp/timestamp_error_data/',
+            ],
+            ['get', 'post'],
+            project_views.timestamp.get_timestamp_error_data,
+            json_renderer,
+        ),
+        Rule(
+            [
+                '/project/<pid>/timestamp/add_timestamp/',
+                '/project/<pid>/node/<nid>/timestamp/add_timestamp/',
+            ],
+            ['get', 'post'],
+            project_views.timestamp.add_timestamp_token,
+            json_renderer,
+        ),
+
     ], prefix='/api/v1')
 
     # Set up static routing for addons
     # NOTE: We use nginx to serve static addon assets in production
     addon_base_path = os.path.abspath('addons')
-    if settings.DEV_MODE:
+    if settings.DEV_MODE or settings.to_bool('USE_STATIC_FILES', False):
         from flask import stream_with_context, Response
         import requests
 

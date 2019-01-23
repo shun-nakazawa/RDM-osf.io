@@ -38,6 +38,7 @@
                     <div class="btn-group">
                     % if not node["is_public"]:
                         <button class="btn btn-default disabled">Private</button>
+                        % if project_makepublic:
                         % if 'admin' in user['permissions'] and not (node['is_pending_registration'] or node['is_pending_embargo']) and not (node['is_embargoed'] and parent_node['exists']):
                         <a disabled data-bind="attr: {'disabled': false}, css: {'disabled': nodeIsPendingEmbargoTermination}" class="btn btn-default" href="#nodesPrivacy" data-toggle="modal">
                           Make Public
@@ -45,6 +46,7 @@
                           <span class="fa fa-info-circle hidden" data-bind="css: {'hidden': false}, tooltip: {title: makePublicTooltip, placement: 'bottom', disabled: true}"></span>
                           <!-- /ko -->
                         </a>
+                        % endif
                         % endif
                     % else:
                         % if 'admin' in user['permissions'] and not node['is_registration']:
@@ -428,8 +430,23 @@
         <div class="panel panel-default">
             <div class="panel-heading clearfix">
                 <h3 class="panel-title">Recent Activity</h3>
+                <div id="RefreshLog" class="btn btn-sm btn-default pull-right">Refresh</div>
             </div>
             <div class="panel-body">
+                <div class="db-poFilter m-r-xs row">
+                     <div class="db-buttonRow col-xs-10 col-sm-6 col-lg-4">
+                         <form>
+                             <input type="text" id="LogSearchName" placeholder="[optional] UserName">
+                         </form>
+                         <input type="hidden" id="LogSearchKeyUser">
+                     </div>
+                     <div class="db-buttonRow col-xs-10 col-sm-6 col-lg-4">
+                         <input type="text" id="LogSearchS" placeholder="Start Date[yyyy-mm-dd]">
+                     </div>
+                     <div class="db-buttonRow col-xs-10 col-sm-6 col-lg-4">
+                         <input type="text" id="LogSearchE" placeholder="End Date[yyyy-mm-dd]">
+                     </div>
+                </div>
                 <div id="logFeed">
                     <div class="spinner-loading-wrapper">
                         <div class="logo-spin logo-lg"></div>
@@ -437,6 +454,12 @@
                     </div>
                 </div>
             </div>
+            % if 'admin' in user['permissions']:
+            <div class="panel-heading clearfix">
+                <h4 class="panel-title">Download as file</h4>
+                <div id="DownloadLog" class="btn btn-sm btn-default pull-right">Download</div>
+            </div>
+            % endif
         </div>
 
     </div>

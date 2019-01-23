@@ -98,6 +98,24 @@
                                              valueUpdate: 'afterkeydown'",
                             class="form-control resize-vertical" style="max-width: 100%"></textarea>
                         </div>
+                    % if 'admin' in user['permissions']:
+                        <div class="form-group">
+                            <label for="description">Select Timestamp Function:</label>
+                            <select id="timestamp_pattern" data-bind="value: selectedTimestampPattern">
+                            % if timestamp_pattern_division == 1:
+                                 <option value="1" selected>Timestamp only</option>
+<%doc> Only "Timestamp only" (while digital signature develop)
+                                 <option value="2">Timestamp with digital signature</option>
+</%doc>
+                            % else:
+                                 <option value="1">Timestamp only</option>
+<%doc>
+                                 <option value="2" selected>Timestamp with digital signature</option>
+</%doc>
+                            % endif
+                            </select>
+                        </div>
+                    % endif
                            <button data-bind="click: cancelAll"
                             class="btn btn-default">Cancel</button>
                             <button data-bind="click: updateAll"
@@ -107,7 +125,19 @@
                         </div>
                     % if 'admin' in user['permissions']:
                         <hr />
+                        % if can_delete:
+                            <div class="help-block">
+                                A project cannot be deleted if it has any components within it.
+                                To delete a parent project, you must first delete all child components
+                                by visiting their settings pages.
+                            </div>
                             <button id="deleteNode" class="btn btn-danger btn-delete-node" data-toggle="modal" data-target="#nodesDelete">Delete ${node['node_type']}</button>
+                        % else:
+                            <div class="help-block">
+                                A project which is related to a external group (${group}) cannot be deleted.
+                            </div>
+                            <button disabled="disabled" class="btn btn-danger btn-delete-node" data-toggle="modal" data-target="#nodesDelete">Delete ${node['node_type']}</button>
+                       % endif
                     % endif
                     </div>
                 </div>
@@ -171,7 +201,7 @@
                                 %if node['is_public']:
                                     <p class="text">Control who can edit the wiki of <b>${node['title']}</b></p>
                                 %else:
-                                    <p class="text">Control who can edit your wiki. To allow all OSF users to edit the wiki, <b>${node['title']}</b> must be public.</p>
+                                    <p class="text">Control who can edit your wiki. To allow all GakuNin RDM users to edit the wiki, <b>${node['title']}</b> must be public.</p>
                                 %endif
                             </div>
 
@@ -215,7 +245,7 @@
                             <div class="radio">
                                 <label>
                                     <input type="radio" name="commentLevel" value="public" ${'checked' if comments['level'] == 'public' else ''}>
-                                    When the ${node['node_type']} is public, any OSF user can post comments
+                                    When the ${node['node_type']} is public, any GakuNin RDM user can post comments
                                 </label>
                             </div>
 
@@ -297,7 +327,7 @@
                                             id="forwardUrl"
                                             class="form-control"
                                             data-bind="value: url"
-                                            placeholder="Send people who visit your OSF project page to this link instead"
+                                            placeholder="Send people who visit your GakuNin RDM project page to this link instead"
                                         />
                                     </div>
 
@@ -359,7 +389,7 @@
                             % else:
 
                                 <div class="help-block">
-                                    Withdrawing a registration will remove its content from the OSF, but leave basic metadata
+                                    Withdrawing a registration will remove its content from the GakuNin RDM, but leave basic metadata
                                     behind. The title of a withdrawn registration and its contributor list will remain, as will
                                     justification or explanation of the withdrawal, should you wish to provide it. Withdrawn
                                     registrations will be marked with a <strong>withdrawn</strong> tag.
@@ -394,12 +424,12 @@
                              <p class="text-muted">Contributors with read-only permissions to this project cannot add or remove institutional affiliations.</p>
                          % endif:
                          <!-- ko if: affiliatedInstitutions().length == 0 -->
-                         Projects can be affiliated with institutions that have created OSF for Institutions accounts.
+                         Projects can be affiliated with institutions that have created GakuNin RDM for Institutions accounts.
                          This allows:
                          <ul>
                             <li>institutional logos to be displayed on public projects</li>
                             <li>public projects to be discoverable on specific institutional landing pages</li>
-                            <li>single sign-on to the OSF with institutional credentials</li>
+                            <li>single sign-on to the GakuNin RDM with institutional credentials</li>
                             <li><a href="http://help.osf.io/m/os4i">FAQ</a></li>
                          </ul>
                          <!-- /ko -->
@@ -475,6 +505,7 @@
       window.contextVars.currentUser = window.contextVars.currentUser || {};
       window.contextVars.currentUser.institutions = ${ user['institutions'] | sjson, n };
       window.contextVars.currentUser.permissions = ${ user['permissions'] | sjson, n } ;
+      window.contextVars.timestampPattern = ${ node['timestamp_pattern_division'] | sjson, n };
       window.contextVars.analyticsMeta = $.extend(true, {}, window.contextVars.analyticsMeta, {
           pageMeta: {
               title: 'Settings',

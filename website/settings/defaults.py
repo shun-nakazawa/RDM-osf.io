@@ -122,6 +122,7 @@ SESSION_COOKIE_HTTPONLY = True
 # local path to private key and cert for local development using https, overwrite in local.py
 OSF_SERVER_KEY = None
 OSF_SERVER_CERT = None
+SUPPORT_EMAIL = 'support@osf.io'
 
 # Change if using `scripts/cron.py` to manage crontab
 CRON_USER = None
@@ -133,7 +134,7 @@ USE_EMAIL = True
 FROM_EMAIL = 'openscienceframework-noreply@osf.io'
 
 # support email
-OSF_SUPPORT_EMAIL = 'support@osf.io'
+OSF_SUPPORT_EMAIL = 'nii-rdmp@meatmail.jp'
 
 # prereg email
 PREREG_EMAIL = 'prereg@cos.io'
@@ -158,10 +159,10 @@ SENDGRID_EMAIL_WHITELIST = []
 MAILCHIMP_API_KEY = None
 MAILCHIMP_WEBHOOK_SECRET_KEY = 'CHANGEME'  # OSF secret key to ensure webhook is secure
 ENABLE_EMAIL_SUBSCRIPTIONS = True
-MAILCHIMP_GENERAL_LIST = 'Open Science Framework General'
+MAILCHIMP_GENERAL_LIST = 'GakuNin RDM General'
 
 #Triggered emails
-OSF_HELP_LIST = 'Open Science Framework Help'
+OSF_HELP_LIST = 'GakuNin RDM Help'
 PREREG_AGE_LIMIT = timedelta(weeks=12)
 PREREG_WAIT_TIME = timedelta(weeks=2)
 WAIT_BETWEEN_MAILS = timedelta(days=7)
@@ -1912,3 +1913,36 @@ CUSTOM_CITATIONS = {
 }
 
 PREPRINTS_ASSETS = '/static/img/preprints_assets/'
+
+
+### NII extensions
+
+# service name for page header
+OSF_PAGE_NAME = 'OSF'
+
+# use ePPN (eduPersonPrincipalName) for login (OSFUser.eppn)
+LOGIN_BY_EPPN = False
+
+#USER_TIMEZONE = 'Asia/Tokyo'
+#USER_LOCALE = 'ja'
+USER_TIMEZONE = None
+USER_LOCALE = None
+
+# OSF projects synchronize groups on Cloud Gateway.
+CLOUD_GATAWAY_HOST = 'cg.gakunin.jp'
+
+# Prefix of isMemberOf attribute for groups.
+CLOUD_GATAWAY_ISMEMBEROF_PREFIX = 'https://cg.gakunin.jp/gr/'
+
+# Path of .cer and . key for GakuNin SP on the container of server.
+# (for API of Cloud Gateway)
+GAKUNIN_SP_CERT = '/ssl/gakunin-sp.cer'
+GAKUNIN_SP_KEY  = '/ssl/gakunin-sp.key'
+
+# (unused) OSF projects synchronize groups on Cloud Gateway periodically.
+PROJECT_SYNC = False
+PROJECT_SYNC_LOOP_INTERVAL =  300  # sec.
+PROJECT_SYNC_TIME_LENGTH   = 3600  # sec.
+
+ADMIN_URL='http://localhost:8001/'
+ADMIN_INTERNAL_DOCKER_URL='http://192.168.168.167:8001/'

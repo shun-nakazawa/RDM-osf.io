@@ -138,14 +138,14 @@ Ubuntu: Skip install of docker-sync. instead...
   - `$ docker-compose up -d mfr wb fakecas sharejs`
 5. Run migrations and create preprint providers
   - When starting with an empty database you will need to run migrations and populate preprint providers. See the [Running arbitrary commands](#running-arbitrary-commands) section below for instructions.
-6. Start the OSF Web, API Server, Preprints, and Registries (Detached)
+6. Start the GakuNin RDM Web, API Server, Preprints, and Registries (Detached)
   - `$ docker-compose up -d worker web api admin preprints registries`
-7. View the OSF at [http://localhost:5000](http://localhost:5000).
+7. View the GakuNin RDM at [http://localhost:5000](http://localhost:5000).
 
 
 ## Quickstart: Running all OSF services in the background
 
-- Once the requirements have all been installed, you can start the OSF in the background with
+- Once the requirements have all been installed, you can start the GakuNin RDM in the background with
 
   ```bash
   $ docker-sync start
@@ -410,3 +410,31 @@ wb:
     - wb_tmp_vol:/tmp
   stdin_open: true
 ```
+
+## About setting for "Trusted-Timestamp" usage
+
+When you use "Trusted Timestamp Token", execute following steps.
+1. add cotaining keyfile directory at web container:
+mofify docker-compose.yml
+```yml
+admin:
+  ...
+  volumes:
+    - /<host_server>/<user_key_info>:/user_key_info # <- add Directory containing keyfile ex. /mnt/nfs/keys
+web:
+  ...
+  volumes:
+    - /<host_server>/<user_key_info>:/user_key_info # <- add here
+```
+
+2. download http://eswg.jnsa.org/sandbox/handson/ESig-PKI-handson-win-v100.zip, and extract root2.pem
+3. rename root2.pem to root_cert_verifycate.pem
+4. upload root_cert_verifycate.pem cotaining keyfile directory
+```bash
+  $ cp root_cert_verifycate.pem /mnt/nfs/keys
+```
+5. copy api/timestamp/local-dist.py to api/timestamp/local.py
+```bash
+  $ api/timestamp/local-dist.py api/timestamp/local.py
+```
+

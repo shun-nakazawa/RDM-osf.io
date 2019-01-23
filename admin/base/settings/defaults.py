@@ -18,7 +18,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
 
-# from the OSF settings
+# from the GakuNin RDM settings
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = osf_settings.SECRET_KEY
 
@@ -43,7 +43,7 @@ CSRF_COOKIE_SECURE = osf_settings.SECURE_MODE
 CSRF_COOKIE_HTTPONLY = False
 
 ALLOWED_HOSTS = [
-    '.osf.io'
+    'osf.io'
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -112,6 +112,22 @@ INSTALLED_APPS = (
     'admin.institutions',
     'admin.preprint_providers',
 
+    # Additional addons
+    'addons.bitbucket',
+    'addons.box',
+    'addons.dataverse',
+    'addons.dropbox',
+    'addons.figshare',
+    'addons.forward',
+    'addons.github',
+    'addons.googledrive',
+    'addons.mendeley',
+    'addons.owncloud',
+    'addons.s3',
+    'addons.zotero',
+    #     'addons.swift',
+    #     'addons.azureblobstorage',
+    #     'addons.weko',
 )
 
 MIGRATION_MODULES = {
@@ -120,6 +136,21 @@ MIGRATION_MODULES = {
     'addons_osfstorage': None,
     'addons_wiki': None,
     'addons_twofactor': None,
+    'addons_bitbucket': None,
+    'addons_box': None,
+    'addons_dataverse': None,
+    'addons_dropbox': None,
+    'addons_figshare': None,
+    'addons_forward': None,
+    'addons_github': None,
+    'addons_googledrive': None,
+    'addons_mendeley': None,
+    'addons_owncloud': None,
+    'addons_s3': None,
+    'addons_zotero': None,
+    #    'addons.swift': None,
+    #    'addons.azureblobstorage': None,
+    #    'addons.weko': None,
 }
 
 USE_TZ = True
@@ -252,3 +283,18 @@ if DEBUG:
 
 # If set to True, automated tests with extra queries will fail.
 NPLUSONE_RAISE = False
+FCM_SETTINGS = {
+    'FCM_SERVER_KEY': ''
+}
+# separator to devide domain from eppn
+SHIB_EPPN_SCOPING_SEPARATOR = '@'
+
+# hide embededDS, login user form in Adoministrator login page
+ENABLE_SHB_LOGIN = True
+ENABLE_LOGIN_FORM = False
+
+# Addon Controls
+ENABLE_FORCE_CHECK = False
+
+# mail address uses mail from rdm_announcement
+ANNOUNCEMENT_EMAIL_FROM = 'noreply@rdm.rcos.nii.ac.jp'

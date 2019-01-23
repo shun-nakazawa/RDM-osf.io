@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load static %}
+{% load user_extras %}
+{% load spam_extras %}
+
+{% block top_includes %}
+  <link rel="stylesheet" type="text/css" href="/static/css/institutions.css" />
+{% endblock %}
+
+{% block title %}
+    <title>TimeStampAddList</title>
+{% endblock title %}
+
+{% block content %}
+<h3>TimeStamp Add ({{ project_title }})</h3>
+<form action "" id="addTimestampForm">
+    <a class="btn btn-success" id="btn-verify">Verify</a>
+{% comment GRDM 7117 disable some timestamp features %}
+    <a class="btn btn-success" id="btn-addtimestamp">Request Trusted Timestamp</a>
+{% endcomment %}
+    <font color="red">
+        <h4 id="timestamp_errors_spinner"></h4>
+    </font>
+    <table id="datatables" class="table table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+            <tr>
+                <th width="1%"><input type="checkBox" id="addTimestampAllCheck" style="width: 14px; height: 14px;" /></th>
+                <th>FilePath</th>
+                <th>TimestampUpdateUser</th>
+                <th>TimestampUpdateDate</th>
+                <th>Timestamp verification</th>
+            </tr>
+        </thead>
+        <tbody id="timestamp_error_list">
+        {% for provider_error_info in init_project_timestamp_error_list %}
+            <tr><td colspan="5"><b>{{ provider_error_info.provider }}</b></td></tr>
+            {% for error_info in provider_error_info.error_list %}
+            <tr class="addTimestamp">
+                <td width="1%"><input type="checkBox" id="addTimestampCheck" style="width: 14px; height: 14px;" /></td>
+                <td>
+                    {{ error_info.file_path }}
+                    <input type="hidden" name="provider" id="provider" value="{{ provider_error_info.provider }}" />
+                    <input type="hidden" name="file_id" id="file_id" value="{{ error_info.file_id }}" />
+                    <input type="hidden" name="file_path" id="file_path" value="{{ error_info.file_path }}" />
+                    <input type="hidden" name="project_id" id="project_id" value="{{ error_info.project_id }}" />
+                    <input type="hidden" name="version" id="version" value="{{ error_info.version }}" />
+                    <input type="hidden" name="file_name" id="file_name" value="{{ error_info.file_name }}" />
+                </td>
+                <td>{{ error_info.operator_user }}</td>
+                <td>{{ error_info.operator_date }}</td>
+                <td>{{ error_info.verify_result_title }}</td>
+            </tr>
+            {% endfor %}
+        {% endfor %}
+        </tbody>
+    </table>
+    {% csrf_token %}
+</form>
+
+<script charset="utf-8">
+    window.timestampaddUrls = {
+        verify: "{% url 'timestampadd:verify' institution_id=institution_id guid=guid %}",
+        verifyData: "{% url 'timestampadd:verify_data' institution_id=institution_id guid=guid %}",
+        addTimestampData: "{% url 'timestampadd:add_timestamp_data' institution_id=institution_id guid=guid %}",
+        addtimestamp: "{% url 'timestampadd:addtimestamp' institution_id=institution_id guid=guid %}"
+    };
+</script>
+<script src={{ '/static/public/js/rdm-timestampadd-page.js' }}></script>
+{% endblock content %}
