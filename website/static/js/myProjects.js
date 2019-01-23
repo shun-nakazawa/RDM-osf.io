@@ -420,20 +420,15 @@ var MyProjects = {
 
         // Add All my Projects and All my registrations to collections
         self.systemCollections = options.systemCollections || [
-            new LinkObject('collection', { nodeType : 'projects'}, 'All my projects'),
-            new LinkObject('collection', { nodeType : 'registrations'}, 'All my registrations'),
-            new LinkObject('collection', { nodeType : 'preprints'}, 'All my preprints')
+            new LinkObject('collection', { nodeType : 'projects'}, 'All my projects')
         ];
 
         self.fetchers = {};
         if (!options.systemCollections) {
           self.fetchers[self.systemCollections[0].id] = new NodeFetcher('nodes');
-          self.fetchers[self.systemCollections[1].id] = new NodeFetcher('registrations');
-          self.fetchers[self.systemCollections[2].id] = new NodeFetcher('preprints', self.systemCollections[2].data.link);
         } else {
             // TODO: This assumes that there are two systemcolelctiosn passes and what they are. It should ideally loop through passed collections.
           self.fetchers[self.systemCollections[0].id] = new NodeFetcher('nodes', self.systemCollections[0].data.link);
-          self.fetchers[self.systemCollections[1].id] = new NodeFetcher('registrations', self.systemCollections[1].data.link);
         }
 
         // Initial Breadcrumb for All my projects
@@ -704,9 +699,9 @@ var MyProjects = {
                         if (self.institutionId) {
                             template = m('.db-non-load-template.m-md.p-md.osf-box',
                                 'There have been no completed registrations for this institution, but you can view the ',
-                                m('a', {href: 'https://osf.io/explore/activity/#newPublicRegistrations'}, 'newest public registrations'),
+                                m('a', {href: 'https://rdm.nii.ac.jp/explore/activity/#newPublicRegistrations'}, 'newest public registrations'),
                                 ' or ',
-                                m('a', {href: 'https://osf.io/explore/activity/#popularPublicRegistrations'}, 'popular public registrations.'));
+                                m('a', {href: 'https://rdm.nii.ac.jp/explore/activity/#popularPublicRegistrations'}, 'popular public registrations.'));
                         } else {
                             template = m('.db-non-load-template.m-md.p-md.osf-box',
                             'You have not made any registrations yet. Go to ',
@@ -971,7 +966,9 @@ var MyProjects = {
         self.init = function _init_fileBrowser() {
             self.loadCategories().then(function(){
                 self.fetchers[self.systemCollections[0].id].on(['page', 'done'], self.onPageLoad);
-                self.fetchers[self.systemCollections[1].id].on(['page', 'done'], self.onPageLoad);
+                if(self.systemCollections[1]){
+                    self.fetchers[self.systemCollections[1].id].on(['page', 'done'], self.onPageLoad);
+                }
                 if(self.systemCollections[2]){
                     self.fetchers[self.systemCollections[2].id].on(['page', 'done'], self.onPageLoad);
                 }

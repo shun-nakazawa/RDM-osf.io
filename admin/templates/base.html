@@ -185,8 +185,10 @@
             <li><a href="{% url 'statistics:institutions' %}"><i class='fa fa-link'></i> <span>RDM Statistics</span></a></li>
             <li><a href="{% url 'announcement:index' %}"><i class='fa fa-link'></i> <span>RDM Announcement</span></a></li>
              <li><a href="{% url 'timestampadd:institutions' %}"><i class='fa fa-link'></i> <span>Timestamp Control</span></a></li>
+{% comment GRDM 7117 disable some timestamp features %}
              <li><a href="{% url 'keymanagement:institutions' %}"><i class='fa fa-link'></i> <span>User Keys Management</span></a></li>
              <li><a href="{% url 'timestampsettings:institutions' %}"><i class='fa fa-link'></i> <span>RDM Timestamp Environment</span></a></li>
+{% endcomment %}
           {% endif %}
           </ul><!-- /.sidebar-menu -->
         </section>
@@ -201,7 +203,7 @@
         <section class="content">
           {% block content %}
           <h1>
-           Welcome to the OSF Admin Home Page
+           Welcome to the GakuNin RDM Admin Home Page
           </h1>
           <!-- Your Page Content Here -->
           {% endblock %}

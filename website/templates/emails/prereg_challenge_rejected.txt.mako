@@ -4,16 +4,16 @@ Thank you for submitting your research plan to the Preregistration Challenge.
 
 Reviewers have made comments on your plan. We require that you address the comments found on ${draft_url} and resubmit. 
 
-Each submission must pass this review process in which the statistical methods of the proposed study and its analyses are checked for completeness and adherence to Preregistration Challenge eligibility requirements (https://cos.io/prereg). This review does not assess the substance of the research, or the validity of the research design or statistical methodology. This review has no impact on the independent editorial decisions of any journal.
+Each submission must pass this review process in which the statistical methods of the proposed study and its analyses are checked for completeness and adherence to Preregistration Challenge eligibility requirements (https://nii.ac.jp/prereg). This review does not assess the substance of the research, or the validity of the research design or statistical methodology. This review has no impact on the independent editorial decisions of any journal.
 
-Prereg Challenge administrators and reviewers review the submitted study design and analysis descriptions, and determine whether all question fields are answered with enough detail to fully pre-specify the design and analysis plan, and follow the eligibility requirements. See https://osf.io/h4ga8/ to learn more about the guidelines that reviewers use when evaluating your submitted plans.
+Prereg Challenge administrators and reviewers review the submitted study design and analysis descriptions, and determine whether all question fields are answered with enough detail to fully pre-specify the design and analysis plan, and follow the eligibility requirements. See https://rdm.nii.ac.jp/h4ga8/ to learn more about the guidelines that reviewers use when evaluating your submitted plans.
 
 Sincerely,
 
-The team at the Center for Open Science
+The team at the National Institute of Informatics
 
-Center for Open Science
+National Institute of Informatics
 
-210 Ridge McIntire Road, Suite 500, Charlottesville, VA 22903-5083
+2-1-2 Hitotsubashi, Chiyoda Ward, Tokyo 101-8430, JAPAN
 
-Privacy Policy: https://github.com/CenterForOpenScience/cos.io/blob/master/PRIVACY_POLICY.md
+Privacy Policy: https://meatwiki.nii.ac.jp/confluence/pages/viewpage.action?pageId=32676422

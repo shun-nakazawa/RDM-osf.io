@@ -128,19 +128,20 @@ def serialize_node_summary(node, auth, primary=True, show_path=False):
 
 @email_required
 def index():
-    try:  # Check if we're on an institution landing page
-        #TODO : make this way more robust
-        institution = Institution.objects.get(domains__contains=[request.host.lower()], is_deleted=False)
-        inst_dict = serialize_institution(institution)
-        inst_dict.update({
-            'home': False,
-            'institution': True,
-            'redirect_url': '{}institutions/{}/'.format(DOMAIN, institution._id),
-        })
+    if request.host_url != settings.DOMAIN:
+        try:  # Check if we're on an institution landing page
+            #TODO : make this way more robust
+            institution = Institution.objects.get(domains__contains=[request.host.lower()], is_deleted=False)
+            inst_dict = serialize_institution(institution)
+            inst_dict.update({
+                'home': False,
+                'institution': True,
+                'redirect_url': '{}institutions/{}/'.format(DOMAIN, institution._id),
+            })
 
-        return inst_dict
-    except Institution.DoesNotExist:
-        pass
+            return inst_dict
+        except Institution.DoesNotExist:
+            pass
 
     user_id = get_current_user_id()
     if user_id:  # Logged in: return either landing page or user home page
@@ -370,7 +371,7 @@ def resolve_guid(guid, suffix=None):
 
 # redirect osf.io/about/ to OSF wiki page osf.io/4znzp/wiki/home/
 def redirect_about(**kwargs):
-    return redirect('https://osf.io/4znzp/wiki/home/')
+    return redirect('https://rdm.nii.ac.jp/4znzp/wiki/home/')
 
 def redirect_help(**kwargs):
     return redirect('/faq/')
@@ -395,7 +396,7 @@ def redirect_to_home():
 
 def redirect_to_cos_news(**kwargs):
     # Redirect to COS News page
-    return redirect('https://cos.io/news/')
+    return redirect('https://nii.ac.jp/news/')
 
 
 # Return error for legacy SHARE v1 search route

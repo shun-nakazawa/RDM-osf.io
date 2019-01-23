@@ -39,6 +39,7 @@
                         </td>
                         <td>{% include addon.institution_settings_template with addon=addon institution=institution %}</td>
 
+                    {% if enable_force %}
                         <td class="is_forced">
                             {% if addon.is_supported_force_to_use %}
                             <div class="checkbox">
@@ -51,6 +52,7 @@
                             </div>
                             {% endif %}
                         </td>
+                    {% endif %}
                     </tr>
                 {% endfor %}
                 </table>

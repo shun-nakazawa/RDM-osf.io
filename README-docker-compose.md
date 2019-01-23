@@ -138,19 +138,19 @@ Ubuntu: Skip install of docker-sync. instead...
   - `$ docker-compose up -d mfr wb fakecas sharejs`
 5. Run migrations and create preprint providers
   - When starting with an empty database you will need to run migrations and populate preprint providers. See the [Running arbitrary commands](#running-arbitrary-commands) section below for instructions.
-6. Start the OSF Web, API Server, Preprints, and Registries (Detached)
+6. Start the GakuNin RDM Web, API Server, Preprints, and Registries (Detached)
   - `$ docker-compose up -d worker web api admin preprints registries`
-7. View the OSF at [http://localhost:5000](http://localhost:5000).
+7. View the GakuNin RDM at [http://localhost:5000](http://localhost:5000).
 
 
 ## Quickstart: Running all OSF services in the background
 
-- Once the requirements have all been installed, you can start the OSF in the background with
+- Once the requirements have all been installed, you can start the GakuNin RDM in the background with
 
   ```bash
   $ docker-sync start
   # Wait until you see "Nothing to do: replicas have not changed since last sync."
-  $ docker-compose up -d assets admin_assets mfr wb fakecas sharejs worker web api admin preprints registries
+  $ docker-compose up -d assets admin_assets mfr wb fakecas sharejs worker web api admin preprints registries ember_osf_web
   ```
 
 - To view the logs for a given container: 
@@ -176,6 +176,9 @@ Ubuntu: Skip install of docker-sync. instead...
 - Populate citation styles
   - Needed for api v2 citation style rendering.
     - `docker-compose run --rm web python -m scripts.parse_citation_styles`
+- Start ember_osf_web
+  - Needed for quickfiles feature:
+    - `docker-compose up -d ember_osf_web`
 - OPTIONAL: Register OAuth Scopes
   - Needed for things such as the ember-osf dummy app
     - `docker-compose run --rm web python -m scripts.register_oauth_scopes`

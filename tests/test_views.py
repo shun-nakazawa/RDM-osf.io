@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Views tests for the OSF."""
+"""Views tests for the GakuNin RDM."""
 
 from __future__ import absolute_import
 
@@ -4117,8 +4117,8 @@ class TestConfigureMailingListViews(OsfTestCase):
 
     @mock.patch('website.mailchimp_utils.get_mailchimp_api')
     def test_mailchimp_webhook_subscribe_action_does_not_change_user(self, mock_get_mailchimp_api):
-        """ Test that 'subscribe' actions sent to the OSF via mailchimp
-            webhooks update the OSF database.
+        """ Test that 'subscribe' actions sent to the GakuNin RDM via mailchimp
+            webhooks update the GakuNin RDM database.
         """
         list_id = '12345'
         list_name = 'OSF General'
@@ -4143,13 +4143,13 @@ class TestConfigureMailingListViews(OsfTestCase):
                             content_type="application/x-www-form-urlencoded",
                             auth=user.auth)
 
-        # user field is updated on the OSF
+        # user field is updated on the GakuNin RDM
         user.reload()
         assert_true(user.mailchimp_mailing_lists[list_name])
 
     @mock.patch('website.mailchimp_utils.get_mailchimp_api')
     def test_mailchimp_webhook_profile_action_does_not_change_user(self, mock_get_mailchimp_api):
-        """ Test that 'profile' actions sent to the OSF via mailchimp
+        """ Test that 'profile' actions sent to the GakuNin RDM via mailchimp
             webhooks do not cause any database changes.
         """
         list_id = '12345'
@@ -4205,7 +4205,7 @@ class TestConfigureMailingListViews(OsfTestCase):
                             content_type="application/x-www-form-urlencoded",
                             auth=user.auth)
 
-        # user field is updated on the OSF
+        # user field is updated on the GakuNin RDM
         user.reload()
         assert_false(user.mailchimp_mailing_lists[list_name])
 
@@ -4871,7 +4871,7 @@ class TestResolveGuid(OsfTestCase):
 
 
     def test_preprint_provider_with_osf_domain(self):
-        provider = PreprintProviderFactory(_id='osf', domain='https://osf.io/')
+        provider = PreprintProviderFactory(_id='osf', domain='https://rdm.nii.ac.jp/')
         preprint = PreprintFactory(provider=provider)
         url = web_url_for('resolve_guid', _guid=True, guid=preprint._id)
         res = self.app.get(url)
@@ -5200,7 +5200,7 @@ def create_rdmfiletimestamptokenverifyresult(self, filename='test_file_timestamp
     ## create tmp_dir
     current_datetime = dt.datetime.now(pytz.timezone('Asia/Tokyo'))
     current_datetime_str = current_datetime.strftime("%Y%m%d%H%M%S%f")
-    tmp_dir = 'tmp_{}_{}_{}'.format(self.user._id, file_node._id, current_datetime_str)
+    tmp_dir = '/tmp/tmp_{}_{}_{}'.format(self.user._id, file_node._id, current_datetime_str)
     os.mkdir(tmp_dir)
     ## create tmp_file (file_node)
     tmp_file = os.path.join(tmp_dir, filename)
@@ -5363,7 +5363,7 @@ class TestAddonFileViewTimestampFunc(OsfTestCase):
         user_info = OSFUser.objects.get(id=Guid.objects.get(_id=ret['user']['id']).object_id)
         filename='tests.test_views.test_timestamptoken_verify'
         file_node = create_test_file(node=self.node, user=self.user, filename=filename) 
-        tmp_dir = 'tmp_{}'.format(ret['user']['id'])
+        tmp_dir = '/tmp/tmp_{}'.format(ret['user']['id'])
         os.mkdir(tmp_dir)
         tmp_file = os.path.join(tmp_dir, file_node.name)
         with open(tmp_file, "wb") as file:

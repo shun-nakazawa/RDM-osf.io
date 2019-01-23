@@ -78,7 +78,7 @@ def osf_oauth_callback(service_name, auth):
 def oauth_callback(service_name):
     # OSFAdmin
     osfadmin_callback_url = osfadmin_oauth_callback(service_name)
-    # if OAuth autherization failed on the OSFAdmin side,
+    # if OAuth autherization failed on the GakuNin RDM Admin side,
     # consider it that the request was for OSF.
     if osfadmin_callback_url:
         try:
@@ -97,7 +97,9 @@ def osfadmin_oauth_callback(service_name):
     f.path = '/addons/oauth/callback/{}/'.format(service_name)
     f.args = flask.request.args.to_dict(flat=False)
     try:
-        r = requests.get(f.url, headers=dict(flask.request.headers))
+        headers = dict(flask.request.headers)
+        headers['Content-Length'] = str(0)
+        r = requests.get(f.url, headers=headers)
     except ConnectionError:
         return None
     if not r.ok:
