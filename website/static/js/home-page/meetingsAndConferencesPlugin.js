@@ -16,7 +16,7 @@ var MeetingsAndConferences = {
                     m('.col-md-8',
                         [
                             m('div.conference-centering',  m('h3', 'Hosting a conference or meeting?')),
-                            m('div.conference-centering.m-t-lg',
+                            m('div.conference-centering.m-t-lg',x
                                 m('p.text-bigger', 'Use the GakuNin RDM for Meetings service to provide a central location for conference submissions.')
                             )
                         ]
