@@ -108,6 +108,13 @@ module.exports = {
                         $osf.osfSupportLink(),
             submitSettingsSuccess : 'Folder Successfully linked',
         },
+        iqbrims: {
+            // Shown on clicking "Delete Access Token" for iqbrims
+            confirmDeauth: 'Are you sure you want to disconnect the IQB-RIMS account? ' +
+                'This will revoke access to IQB-RIMS for all projects you have ' +
+                'associated with this account.',
+            deauthError: 'Could not disconnect the IQB-RIMS account at this time',
+        },
     },
     apiOauth2Application: {
         discardUnchanged: 'Are you sure you want to discard your unsaved changes?',
