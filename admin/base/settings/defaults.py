@@ -170,7 +170,8 @@ UNSUPPORTED_FORCE_TO_USE_ADDONS = [
     's3compat',
     'nextcloud',
     'gitlab',
-    'onedrive'
+    'onedrive',
+    'iqbrims'
 ]
 
 USE_TZ = True
