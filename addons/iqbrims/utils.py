@@ -31,7 +31,6 @@ def to_hgrid(item, node, path):
     return serialized
 
 def oauth_disconnect_following_other(user, other_user_addon):
-    # TODO: fix
     user_addon = user.get_addon(IQBRIMSAddonConfig.short_name)
 
     for account in user_addon.external_accounts.all():
