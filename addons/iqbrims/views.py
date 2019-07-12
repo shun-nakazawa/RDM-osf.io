@@ -15,7 +15,7 @@ from framework.auth import Auth
 from website.mails import Mail, send_mail
 from framework.exceptions import HTTPError
 
-from osf.models import RdmAddonOption, BaseFileNode
+from osf.models import RdmAddonOption
 from website.project.decorators import (
     must_have_addon,
     must_be_valid_project,
@@ -247,9 +247,9 @@ def iqbrims_get_storage(**kwargs):
     if len(files) > 0:
         for f in files:
             url = website_settings.DOMAIN.rstrip('/') + '/' + node._id + \
-                  '/files/iqbrims/' + \
-                  urllib.quote(folders[0]['title'].encode('utf8')) + '/' + \
-                  urllib.quote(f['title'].encode('utf8'))
+                '/files/iqbrims/' + \
+                urllib.quote(folders[0]['title'].encode('utf8')) + '/' + \
+                urllib.quote(f['title'].encode('utf8'))
             node_urls.append({'title': f['title'], 'url': url})
             url = website_settings.DOMAIN.rstrip('/') + '/' + management_node._id + \
                   '/files/googledrive' + \
@@ -273,7 +273,6 @@ def iqbrims_reject_storage(**kwargs):
     iqbrims = node.get_addon('iqbrims')
     folder = kwargs['folder']
     folder_name = None
-    file_name = None
     if folder == 'index':
         folder_name = REVIEW_FOLDERS['raw']
     else:
