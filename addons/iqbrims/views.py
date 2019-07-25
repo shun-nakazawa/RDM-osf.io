@@ -10,7 +10,11 @@ from django.db import transaction
 from django.db.models import Subquery
 from flask import request
 
-from addons.iqbrims.client import IQBRIMSClient, IQBRIMSFlowableClient
+from addons.iqbrims.client import (
+    IQBRIMSClient,
+    IQBRIMSFlowableClient,
+    SpreadsheetClient,
+)
 from framework.auth import Auth
 from website.mails import Mail, send_mail
 from framework.exceptions import HTTPError
@@ -71,6 +75,12 @@ iqbrims_deauthorize_node = generic_views.deauthorize_node(
 @must_be_valid_project
 @must_have_addon('iqbrims', 'node')
 def project_iqbrims(**kwargs):
+    node = kwargs['node'] or kwargs['project']
+    iqbrims = node.get_addon('iqbrims')
+    status = iqbrims.get_status()
+    edit = request.args.get('edit', None)
+    if edit is not None and 'edit' not in status:
+        _iqbrims_set_status(node, {'edit': edit})
     return use_ember_app()
 
 @must_have_addon(SHORT_NAME, 'node')
@@ -105,43 +115,15 @@ def iqbrims_get_status(**kwargs):
 @must_have_addon(SHORT_NAME, 'node')
 def iqbrims_set_status(**kwargs):
     node = kwargs['node'] or kwargs['project']
-    iqbrims = node.get_addon('iqbrims')
     try:
         status = request.json['data']['attributes']
     except KeyError:
         raise HTTPError(http.BAD_REQUEST)
 
-    with transaction.atomic():
-        all_status = iqbrims.get_status()
-        last_status = all_status.copy()
-        all_status.update(status)
-        logger.info('Status: patch={}, all={}'.format(status, all_status))
-        if all_status['state'] in ['deposit', 'check'] and 'labo_id' in all_status:
-            auth = kwargs['auth']
-            register_type = all_status['state']
-            labo_name = all_status['labo_id']
-
-            if last_status['state'] != register_type:
-                app_id = iqbrims.get_process_definition_id(register_type)
-                flowable = IQBRIMSFlowableClient(app_id)
-                logger.info('Starting...: app_id={} project_id={}'.format(app_id, node._id))
-                flowable.start_workflow(node._id, node.title, all_status,
-                                        iqbrims.get_secret())
-            management_node = _get_management_node(node)
-
-            # import auth
-            _iqbrims_import_auth_from_management_node(node, iqbrims, management_node)
-
-            # create folder
-            root_folder = _iqbrims_init_folders(node, management_node, register_type, labo_name)
-
-            # mount container
-            iqbrims.set_folder(root_folder, auth=auth)
-            iqbrims.save()
-
-        iqbrims.set_status(all_status)
+    auth = kwargs['auth']
+    rstatus = _iqbrims_set_status(node, status, auth)
     return {'data': {'id': node._id, 'type': 'iqbrims-status',
-                     'attributes': iqbrims.get_status()}}
+                     'attributes': rstatus}}
 
 @must_be_valid_project
 @must_have_addon(SHORT_NAME, 'node')
@@ -200,14 +182,15 @@ def iqbrims_post_notify(**kwargs):
 @must_have_valid_hash()
 def iqbrims_post_workflow_state(**kwargs):
     node = kwargs['node'] or kwargs['project']
-    iqbrims = node.get_addon('iqbrims')
     part = kwargs['part']
     logger.info('Workflow State: {}, {}'.format(part, request.data))
-    status = iqbrims.get_status()
     reqdata = json.loads(request.data)
+    status = {}
     status['workflow_' + part + '_state'] = reqdata['state']
     status['workflow_' + part + '_permissions'] = reqdata['permissions']
-    iqbrims.set_status(status)
+    if 'updated' in reqdata:
+        status['workflow_' + part + '_updated'] = reqdata['updated']
+    _iqbrims_set_status(node, status)
 
 @must_be_valid_project
 @must_have_addon(SHORT_NAME, 'node')
@@ -218,8 +201,11 @@ def iqbrims_get_storage(**kwargs):
     folder = kwargs['folder']
     folder_name = None
     file_name = None
+    validate = None
     if folder == 'index':
         folder_name = REVIEW_FOLDERS['raw']
+        file_name = settings.INDEXSHEET_FILENAME
+        validate = _iqbrims_filled_index
     else:
         folder_name = REVIEW_FOLDERS[folder]
     try:
@@ -235,7 +221,8 @@ def iqbrims_get_storage(**kwargs):
     files = client.files(folder_id=folders[0]['id'])
     logger.debug(u'Result files: {}'.format([f['title'] for f in files]))
     if file_name is not None:
-        files = [f for f in files if f['title'] == file_name]
+        files = [f for f in files
+                 if f['title'] == file_name and (validate is None or validate(access_token, f))]
     folder_path = iqbrims.folder_path
     management_node = _get_management_node(node)
     base_folder_path = management_node.get_addon('googledrive').folder_path
@@ -305,6 +292,72 @@ def iqbrims_reject_storage(**kwargs):
     return {'status': 'rejected',
             'root_folder': root_folder_path}
 
+@must_be_valid_project
+@must_have_addon(SHORT_NAME, 'node')
+@must_have_valid_hash()
+def iqbrims_create_index(**kwargs):
+    node = kwargs['node'] or kwargs['project']
+    iqbrims = node.get_addon('iqbrims')
+    folder_name = REVIEW_FOLDERS['raw']
+    try:
+        access_token = iqbrims.fetch_access_token()
+    except exceptions.InvalidAuthError:
+        raise HTTPError(403)
+    client = IQBRIMSClient(access_token)
+    folders = client.folders(folder_id=iqbrims.folder_id)
+    folders = [f for f in folders if f['title'] == folder_name]
+    assert len(folders) > 0
+    files = client.files(folder_id=folders[0]['id'])
+    files = [f for f in files if f['title'] == 'files.txt']
+    logger.debug(u'Result files: {}'.format([f['title'] for f in files]))
+    if len(files) == 0:
+        return {'status': 'processing'}
+    files = client.get_content(files[0]['id']).split('\n')
+    _, r = client.create_spreadsheet_if_not_exists(folders[0]['id'],
+                                                   settings.INDEXSHEET_FILENAME)
+    sclient = SpreadsheetClient(r['id'], access_token)
+    sheets = [s
+              for s in sclient.sheets()
+              if s['properties']['title'] == settings.INDEXSHEET_SHEET_NAME]
+    logger.info('Spreadsheet: id={}, sheet={}'.format(r['id'], sheets))
+    if len(sheets) == 0:
+        sclient.add_sheet(settings.INDEXSHEET_SHEET_NAME)
+        sheets = [s
+                  for s in sclient.sheets()
+                  if s['properties']['title'] == settings.INDEXSHEET_SHEET_NAME]
+    assert len(sheets) == 1
+    sheet_id = sheets[0]['properties']['title']
+    sclient.add_files(sheet_id, sheets[0]['properties']['sheetId'], files)
+    result = client.grant_access_from_anyone(r['id'])
+    logger.info('Grant access: {}'.format(result))
+    link = client.get_file_link(r['id'])
+    logger.info('Link: {}'.format(link))
+    return {'status': 'complete', 'url': link}
+
+@must_be_valid_project
+@must_have_addon(SHORT_NAME, 'node')
+@must_have_valid_hash()
+def iqbrims_close_index(**kwargs):
+    node = kwargs['node'] or kwargs['project']
+    iqbrims = node.get_addon('iqbrims')
+    folder_name = REVIEW_FOLDERS['raw']
+    try:
+        access_token = iqbrims.fetch_access_token()
+    except exceptions.InvalidAuthError:
+        raise HTTPError(403)
+    client = IQBRIMSClient(access_token)
+    folders = client.folders(folder_id=iqbrims.folder_id)
+    folders = [f for f in folders if f['title'] == folder_name]
+    assert len(folders) > 0
+    files = client.files(folder_id=folders[0]['id'])
+    files = [f for f in files if f['title'] == settings.INDEXSHEET_FILENAME]
+    logger.debug(u'Result files: {}'.format([f['title'] for f in files]))
+    if len(files) == 0:
+        raise HTTPError(404)
+    result = client.revoke_access_from_anyone(files[0]['id'])
+    logger.info('Revoke access: {}'.format(result))
+    return {'status': 'complete'}
+
 def _iqbrims_import_auth_from_management_node(node, node_addon, management_node):
     """Grant oauth access on user_settings of management_node and
     set reference of user_settings and external_account of management_node
@@ -343,6 +396,39 @@ def _get_management_node(node):
         raise HTTPError(http.FORBIDDEN)
     return opt.management_node
 
+def _iqbrims_set_status(node, status, auth=None):
+    iqbrims = node.get_addon('iqbrims')
+    with transaction.atomic():
+        all_status = iqbrims.get_status()
+        last_status = all_status.copy()
+        all_status.update(status)
+        logger.info('Status: patch={}, all={}'.format(status, all_status))
+        if all_status['state'] in ['deposit', 'check'] and 'labo_id' in all_status:
+            register_type = all_status['state']
+            labo_name = all_status['labo_id']
+
+            if last_status['state'] != register_type:
+                app_id = iqbrims.get_process_definition_id(register_type)
+                flowable = IQBRIMSFlowableClient(app_id)
+                logger.info('Starting...: app_id={} project_id={}'.format(app_id, node._id))
+                flowable.start_workflow(node._id, node.title, all_status,
+                                        iqbrims.get_secret())
+            management_node = _get_management_node(node)
+
+            # import auth
+            _iqbrims_import_auth_from_management_node(node, iqbrims, management_node)
+
+            # create folder
+            root_folder = _iqbrims_init_folders(node, management_node, register_type, labo_name)
+
+            # mount container
+            iqbrims.set_folder(root_folder, auth=auth)
+            iqbrims.save()
+            _iqbrims_update_spreadsheet(node, management_node, register_type, all_status)
+
+        iqbrims.set_status(all_status)
+    return all_status
+
 def _iqbrims_init_folders(node, management_node, register_type, labo_name):
     management_node_addon = IQBRIMSNodeSettings.objects.get(owner=management_node)
     if management_node_addon is None:
@@ -375,3 +461,108 @@ def _iqbrims_init_folders(node, management_node, register_type, labo_name):
             root_folder_title
         ]) + '/',
     }
+
+def _iqbrims_update_spreadsheet(node, management_node, register_type, status):
+    management_node_addon = IQBRIMSNodeSettings.objects.get(owner=management_node)
+    if management_node_addon is None:
+        raise HTTPError(http.BAD_REQUEST, 'IQB-RIMS addon disabled in management node')
+    folder_id = management_node_addon.folder_id
+    try:
+        access_token = management_node_addon.fetch_access_token()
+    except exceptions.InvalidAuthError:
+        raise HTTPError(403)
+    client = IQBRIMSClient(access_token)
+    _, rootr = client.create_folder_if_not_exists(folder_id, register_type)
+    _, r = client.create_spreadsheet_if_not_exists(rootr['id'],
+                                                   settings.APPSHEET_FILENAME)
+    sclient = SpreadsheetClient(r['id'], access_token)
+    sheets = [s
+              for s in sclient.sheets()
+              if s['properties']['title'] == settings.APPSHEET_SHEET_NAME]
+    logger.info('Spreadsheet: id={}, sheet={}'.format(r['id'], sheets))
+    if len(sheets) == 0:
+        sclient.add_sheet(settings.APPSHEET_SHEET_NAME)
+        sheets = [s
+                  for s in sclient.sheets()
+                  if s['properties']['title'] == settings.APPSHEET_SHEET_NAME]
+    assert len(sheets) == 1
+    sheet_id = sheets[0]['properties']['title']
+    acolumns = settings.APPSHEET_DEPOSIT_COLUMNS \
+               if register_type == 'deposit' \
+               else settings.APPSHEET_CHECK_COLUMNS
+    columns = sclient.ensure_columns(sheet_id,
+                                     [c for c, __ in acolumns])
+    column_index = columns.index([c for c, cid in acolumns
+                                  if cid == '_node_id'][0])
+    row_max = sheets[0]['properties']['gridProperties']['rowCount']
+    values = sclient.get_row_values(sheet_id, column_index, row_max)
+    logger.info('IDs: {}'.format(values))
+    iqbrims = node.get_addon('iqbrims')
+    folder_link = client.get_folder_link(iqbrims.folder_id)
+    logger.info('Link: {}'.format(folder_link))
+    if node._id not in values:
+        logger.info('Inserting: {}'.format(node._id))
+        v = _iqbrims_fill_spreadsheet_values(node, status, folder_link,
+                                             columns, ['' for c in columns])
+        sclient.add_row(sheet_id, v)
+    else:
+        logger.info('Updating: {}'.format(node._id))
+        row_index = values.index(node._id)
+        v = sclient.get_row(sheet_id, row_index, len(columns))
+        v += ['' for __ in range(len(v), len(columns))]
+        v = _iqbrims_fill_spreadsheet_values(node, status, folder_link,
+                                             columns, v)
+        sclient.update_row(sheet_id, v, row_index)
+
+def _iqbrims_filled_index(access_token, f):
+    sclient = SpreadsheetClient(f['id'], access_token)
+    sheets = [s
+              for s in sclient.sheets()
+              if s['properties']['title'] == settings.INDEXSHEET_SHEET_NAME]
+    assert len(sheets) == 1
+    sheet_props = sheets[0]['properties']
+    sheet_id = sheet_props['title']
+    col_count = sheet_props['gridProperties']['columnCount']
+    row_count = sheet_props['gridProperties']['rowCount']
+    logger.info('Grid: {}, {}'.format(col_count, row_count))
+    columns = sclient.get_column_values(sheet_id, 1, col_count)
+    fills = sclient.get_row_values(sheet_id, columns.index('Filled'), 2)
+    procs = [fill for fill in fills if fill != 'TRUE']
+    return len(procs) == 0
+
+def _iqbrims_fill_spreadsheet_values(node, status, folder_link, columns,
+                                     values):
+    assert len(columns) == len(values), values
+    acolumns = settings.APPSHEET_DEPOSIT_COLUMNS \
+               if status['state'] == 'deposit' \
+               else settings.APPSHEET_CHECK_COLUMNS
+    values = list(values)
+    for i, col in enumerate(columns):
+        tcols = [cid for c, cid in acolumns if c == col]
+        if len(tcols) == 0:
+            continue
+        tcol = tcols[0]
+        if tcol is None:
+            pass
+        elif tcol == '_updated':
+            values[i] = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+        elif tcol == '_node_id':
+            values[i] = node._id
+        elif tcol == '_node_owner':
+            values[i] = node.creator.fullname
+        elif tcol == '_node_mail':
+            values[i] = node.creator.username
+        elif tcol == '_node_title':
+            values[i] = node.title
+        elif tcol == '_labo_name':
+            labos = [l['text']
+                     for l in settings.LABO_LIST
+                     if l['id'] == status['labo_id']]
+            values[i] = labos[0] if len(labos) > 0 \
+                        else 'Unknown ID: {}'.format(status['labo_id'])
+        elif tcol == '_drive_url':
+            values[i] = folder_link
+        else:
+            assert not tcol.startswith('_')
+            values[i] = status[tcol] if tcol in status else ''
+    return values
