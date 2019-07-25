@@ -64,13 +64,7 @@ class TestConfigViews(IQBRIMSAddonTestCase, OAuthAddonConfigViewsTestCaseMixin, 
         mock_about.return_value = {'rootFolderId': '24601'}
         super(TestConfigViews, self).test_folder_list()
 
-class TestStatusViews(IQBRIMSAddonTestCase, OAuthAddonConfigViewsTestCaseMixin, OsfTestCase):
-    folder = {
-        'path': 'Drive/Camera Uploads',
-        'id': '1234567890'
-    }
-    Serializer = IQBRIMSSerializer
-    client = IQBRIMSClient
+class TestStatusViews(IQBRIMSAddonTestCase, OsfTestCase):
 
     def setUp(self):
         super(TestStatusViews, self).setUp()
