@@ -216,7 +216,7 @@ class TestStatusViews(IQBRIMSAddonTestCase, OsfTestCase):
         })
 
     @mock.patch.object(IQBRIMSFlowableClient, 'start_workflow')
-    @mock.patch.object(iqbrims_views, '_iqbrims_update_spreadsheet')
+    @mock.patch.object(iqbrims_views, 'iqbrims_update_spreadsheet')
     @mock.patch.object(iqbrims_views, '_iqbrims_init_folders')
     @mock.patch.object(iqbrims_views, '_iqbrims_import_auth_from_management_node')
     @mock.patch.object(iqbrims_views, '_get_management_node')
@@ -294,7 +294,7 @@ class TestStatusViews(IQBRIMSAddonTestCase, OsfTestCase):
         ])
 
     @mock.patch.object(IQBRIMSFlowableClient, 'start_workflow')
-    @mock.patch.object(iqbrims_views, '_iqbrims_update_spreadsheet')
+    @mock.patch.object(iqbrims_views, 'iqbrims_update_spreadsheet')
     @mock.patch.object(iqbrims_views, '_iqbrims_init_folders')
     @mock.patch.object(iqbrims_views, '_iqbrims_import_auth_from_management_node')
     @mock.patch.object(iqbrims_views, '_get_management_node')
