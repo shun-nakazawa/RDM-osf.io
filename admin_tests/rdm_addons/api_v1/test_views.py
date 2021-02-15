@@ -171,7 +171,8 @@ class TestSettingsView(AdminTestCase):
         self.request.user.is_staff = True
         res = self.view.get(self.request, *args, **self.view.kwargs)
         nt.assert_equal(res.status_code, 200)
-        nt.assert_true('result' in res.content)
+        content = json.loads(res.content)
+        nt.assert_in('result', content)
 
     def test_get_dummy_addon(self, *args, **kwargs):
         self.request.user.is_superuser = False
