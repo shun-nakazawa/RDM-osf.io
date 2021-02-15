@@ -40,3 +40,7 @@
 #addonSettings .organizational-project-form .organizational-project-save {
   margin-bottom: 2px;
 }
+
+#addonSettings .admin-notes-form .admin-notes-input {
+  margin-bottom: 4px;
+}

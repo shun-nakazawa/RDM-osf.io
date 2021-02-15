@@ -318,3 +318,41 @@ def add_account(json_request, institution_id, addon_name):
         from admin.rdm_addons.api_v1.add.owncloud import add_account
         return add_account(json_request, institution_id, addon_name)
     return {'message': 'unknown addon "{}"'.format(addon_name)}, http_status.HTTP_400_BAD_REQUEST
+
+    return JsonResponse(response, status=status)
+
+class AdminNotesView(RdmPermissionMixin, UserPassesTestMixin, View):
+    """View for admin notes of add-on"""
+    raise_exception = True
+
+    def test_func(self):
+        """check user permissions"""
+        institution_id = int(self.kwargs.get('institution_id'))
+        return self.has_auth(institution_id)
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        """disable CSRF"""
+        return super(AdminNotesView, self).dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        addon_name = kwargs['addon_name']
+        institution_id = int(kwargs['institution_id'])
+        rdm_addon_option = utils.get_rdm_addon_option(institution_id, addon_name)
+        return JsonResponse({'admin_notes': rdm_addon_option.admin_notes})
+
+    def put(self, request, *args, **kwargs):
+        addon_name = kwargs['addon_name']
+        institution_id = int(kwargs['institution_id'])
+        json_request = json.loads(request.body)
+        if 'admin_notes' not in json_request:
+            return JsonResponse({
+                'message': 'Require "admin_notes" parameter.'
+            }, status=http_status.HTTP_400_BAD_REQUEST)
+        admin_notes = json_request['admin_notes']
+
+        rdm_addon_option = utils.get_rdm_addon_option(institution_id, addon_name)
+        rdm_addon_option.admin_notes = admin_notes
+        rdm_addon_option.save()
+
+        return JsonResponse({}, status=http_status.HTTP_200_OK)

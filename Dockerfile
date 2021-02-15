@@ -61,6 +61,7 @@ COPY ./addons/nextcloud/requirements.txt ./addons/nextcloud/
 COPY ./addons/nextcloudinstitutions/requirements.txt ./addons/nextcloudinstitutions/
 COPY ./admin/rdm_announcement/requirements.txt ./admin/rdm_announcement/
 COPY ./admin/rdm_statistics/requirements.txt ./admin/rdm_statistics/
+COPY ./addons/myskelton/requirements.txt ./addons/myskelton/
 
 RUN set -ex \
     && mkdir -p /var/www \
@@ -158,6 +159,7 @@ COPY ./addons/s3compat/static/ ./addons/s3compat/static/
 COPY ./addons/nextcloud/static/ ./addons/nextcloud/static/
 COPY ./addons/nextcloudinstitutions/static/ ./addons/nextcloudinstitutions/static/
 COPY ./addons/iqbrims/static/ ./addons/iqbrims/static/
+COPY ./addons/myskelton/static/ ./addons/myskelton/static/
 RUN \
     # OSF
     yarn install --frozen-lockfile \

@@ -24,6 +24,7 @@ class RdmAddonOption(BaseModel, CommonMixin):
                                         related_name='management_rdm_addon_option_set')
     organizational_node = models.ForeignKey(AbstractNode, blank=True, null=True, default=None, on_delete=models.CASCADE,
                                             related_name='organizational_rdm_addon_option_set')
+    admin_notes = models.CharField(max_length=500, blank=True, null=True)
 
     institution = models.ForeignKey(Institution, blank=False, null=False)
     external_accounts = models.ManyToManyField(ExternalAccount, blank=True)
@@ -42,5 +43,6 @@ class RdmAddonNoInstitutionOption(BaseModel, CommonMixin):
                                         related_name='management_rdm_addon_no_institution_option_set')
     organizational_node = models.ForeignKey(AbstractNode, blank=True, null=True, default=None, on_delete=models.CASCADE,
                                             related_name='organizational_rdm_addon_no_institution_option_set')
+    admin_notes = models.CharField(max_length=500, blank=True, null=True)
 
     external_accounts = models.ManyToManyField(ExternalAccount, blank=True)

@@ -7794,3 +7794,7 @@ msgstr "%1$sに報告してください"
 #: website/static/js/pages/wiki-edit-page.js:110
 msgid "Could not GET wiki menu pages"
 msgstr "Wikiメニューページを取得できませんでした"
+
+#: addons/myskelton/static/node-cfg.js:90
+msgid "Admin Notes by %1$s"
+msgstr "%1$sのアドミンノート"

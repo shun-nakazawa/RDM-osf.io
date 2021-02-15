@@ -121,6 +121,7 @@ INSTALLED_APPS = (
     'addons.iqbrims',
     'addons.dropboxbusiness',
     'addons.nextcloudinstitutions',
+    'addons.myskelton',
 )
 
 # local development using https

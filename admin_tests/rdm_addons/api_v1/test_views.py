@@ -277,3 +277,99 @@ class TestAccountsView(AdminTestCase):
         self.view.kwargs['addon_name'] = 's3'
         res = self.view.post(self.request, *args, **self.view.kwargs)
         nt.assert_equal(res.status_code, 400)
+
+
+# Admin Notes APIのテスト
+class TestAdminNotesView(AdminTestCase):
+    def setUp(self):
+        super(TestAdminNotesView, self).setUp()
+        self.user = AuthUserFactory()
+        self.external_account = ExternalAccountFactory()
+
+        self.rdm_addon_option = rdm_addon_factories.RdmAddonOptionFactory()
+        self.rdm_addon_option.provider = self.external_account.provider
+        self.rdm_addon_option.external_accounts.add(self.external_account)
+        self.rdm_addon_option.save()
+
+        self.user.affiliated_institutions.add(self.rdm_addon_option.institution)
+        self.user.external_accounts.add(self.external_account)
+        self.user.save()
+
+        self.request = RequestFactory().get('/fake_path')
+        self.view = views.AdminNotesView()
+        self.view = setup_user_view(self.view, self.request, user=self.user)
+        self.view.kwargs = {
+            'addon_name': self.external_account.provider,
+            'institution_id': self.rdm_addon_option.institution.id,
+        }
+
+    def tearDown(self):
+        super(TestAdminNotesView, self).tearDown()
+        institution = self.rdm_addon_option.institution
+        self.user.affiliated_institutions.remove(institution)
+        if self.user.external_accounts.filter(pk=self.external_account.id).exists():
+            self.user.external_accounts.remove(self.external_account)
+        self.user.delete()
+        if self.rdm_addon_option.external_accounts.filter(pk=self.external_account.id).exists():
+            self.rdm_addon_option.external_accounts.remove(self.external_account)
+        self.rdm_addon_option.delete()
+        institution.delete()
+        self.external_account.delete()
+
+    def test_super_admin_login(self):
+        """test superuser login"""
+        self.request.user.is_superuser = True
+        nt.assert_true(self.view.test_func())
+
+    def test_admin_login(self):
+        """test institution administrator login"""
+        self.request.user.is_superuser = False
+        self.request.user.is_staff = True
+        nt.assert_true(self.view.test_func())
+
+    def test_non_admin_login(self):
+        """test user not superuser or institution administrator login"""
+        self.request.user.is_superuser = False
+        self.request.user.is_staff = False
+        nt.assert_equal(self.view.test_func(), False)
+
+    def test_non_active_user_login(self):
+        """test invalid user login"""
+        self.request.user.is_active = False
+        nt.assert_equal(self.view.test_func(), False)
+
+    def test_non_registered_user_login(self):
+        """test unregistered user login"""
+        self.request.user.is_registered = False
+        nt.assert_equal(self.view.test_func(), False)
+
+    def test_non_affiliated_institution_user_login(self):
+        """test user unaffiliated institution login"""
+        self.request.user.is_superuser = False
+        self.request.user.is_staff = True
+        self.view.kwargs = {'institution_id': self.rdm_addon_option.institution.id + 1}
+        nt.assert_equal(self.view.test_func(), False)
+
+    def test_get(self, *args, **kwargs):
+        res = self.view.get(self.request, *args, **self.view.kwargs)
+        nt.assert_equal(res.status_code, 200)
+        content = json.loads(res.content)
+        nt.assert_in('admin_notes', content)
+
+    def test_put(self, *args, **kwargs):
+        self.request = RequestFactory().put(
+            '/fake',
+            data=json.dumps({'admin_notes': 'fake admin notes'}),
+            content_type='application/json'
+        )
+        res = self.view.put(self.request, *args, **self.view.kwargs)
+        nt.assert_equal(res.status_code, 200)
+
+    def test_put_empty(self, *args, **kwargs):
+        self.request = RequestFactory().put(
+            '/fake',
+            data=json.dumps({}),
+            content_type='application/json'
+        )
+        res = self.view.put(self.request, *args, **self.view.kwargs)
+        nt.assert_equal(res.status_code, 400)

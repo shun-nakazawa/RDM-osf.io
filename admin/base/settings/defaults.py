@@ -133,6 +133,7 @@ INSTALLED_APPS = (
     'addons.iqbrims',
     'addons.dropboxbusiness',
     'addons.nextcloudinstitutions',
+    'addons.myskelton',
 )
 
 MIGRATION_MODULES = {
@@ -163,6 +164,7 @@ MIGRATION_MODULES = {
     'addons_iqbrims': None,
     'addons_dropboxbusiness': None,
     'addons_nextcloudinstitutions': None,
+    'addons_myskelton': None,
 }
 
 UNSUPPORTED_FORCE_TO_USE_ADDONS = [
@@ -173,7 +175,8 @@ UNSUPPORTED_FORCE_TO_USE_ADDONS = [
     'nextcloud',
     'gitlab',
     'onedrive',
-    'iqbrims'
+    'iqbrims',
+    'myskelton'
 ]
 
 USE_TZ = True

@@ -6661,3 +6661,7 @@ msgstr ""
 #: website/static/js/pages/wiki-edit-page.js:110
 msgid "Could not GET wiki menu pages"
 msgstr ""
+
+#: addons/myskelton/static/node-cfg.js:90
+msgid "Admin Notes by %1$s"
+msgstr ""

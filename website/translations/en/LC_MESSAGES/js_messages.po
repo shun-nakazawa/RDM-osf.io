@@ -6667,3 +6667,7 @@ msgstr ""
 
 #~ msgid "${user}updated file ${path} in Dropbox Business in ${node}"
 #~ msgstr ""
+
+#: addons/myskelton/static/node-cfg.js:90
+msgid "Admin Notes by %1$s"
+msgstr ""
