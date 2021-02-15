@@ -84,11 +84,12 @@ def migrate_guid_referent(guid, desired_referent, content_type_id):
     return guid
 
 def migrate_node_wiki_pages(state, schema):
-    create_wiki_pages_sql(state, schema)
-    create_guids(state, schema)
-    create_wiki_versions_and_repoint_comments_sql(state, schema)
-    migrate_comments_viewed_timestamp_sql(state, schema)
-    migrate_guid_referent_sql(state, schema)
+    # create_wiki_pages_sql(state, schema)
+    # create_guids(state, schema)
+    # create_wiki_versions_and_repoint_comments_sql(state, schema)
+    # migrate_comments_viewed_timestamp_sql(state, schema)
+    # migrate_guid_referent_sql(state, schema)
+    pass
 
 def create_wiki_pages_sql(state, schema):
     NodeWikiPage = state.get_model('addons_wiki', 'nodewikipage')

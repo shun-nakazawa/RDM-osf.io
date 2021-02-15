@@ -20,6 +20,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('osf', '0102_merge_20180509_0846'),
+        ('addons_osfstorage', '0005_region_mfr_url'),
     ]
 
     def add_default_region_to_nodesettings(self, *args, **kwargs):
