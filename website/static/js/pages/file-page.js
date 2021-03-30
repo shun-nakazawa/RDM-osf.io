@@ -64,7 +64,7 @@ $(function() {
     }
 
     var titleEditable = function () {
-        var readOnlyProviders = ['bitbucket', 'figshare', 'dataverse', 'gitlab', 'onedrive'];
+        var readOnlyProviders = ['bitbucket', 'figshare', 'dataverse', 'gitlab'];
         var ctx = window.contextVars;
         if (readOnlyProviders.indexOf(ctx.file.provider) >= 0 || ctx.file.checkoutUser || !ctx.currentUser.canEdit || ctx.node.isRegistration)
             return false;
@@ -112,4 +112,18 @@ $(function() {
             }
         });
     }
+
+    $.ajax({
+        url: window.contextVars.node.urls.api + 'files/timestamp/' + window.contextVars.file.provider + window.contextVars.file.path,
+        timeout: 0,
+        method: 'GET'
+    }).done(function (result) {
+        if (result.timestamp_verify_result_title === 'OK') {
+            $('#timestamp-status').html('');
+        } else {
+            $('#timestamp-status').html('<font color="red"><b>' + _('Timestamp verification:') + _(result.timestamp_verify_result_title) + '</b></font>');
+        }
+    }).fail(function (result) {
+        $('#timestamp-status').html('<font color="red"><b>' + _('Timestamp verification:') + _('Fail: not responded') + '</b></font>');
+    });
 });
