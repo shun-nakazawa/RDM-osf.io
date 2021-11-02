@@ -110,7 +110,7 @@ INSTALLED_APPS = (
     'addons.googledrive',
     'addons.mendeley',
     'addons.onedrive',
-    'addons.owncloud',
+    #'addons.owncloud',
     'addons.s3',
     'addons.twofactor',
     'addons.wiki',
