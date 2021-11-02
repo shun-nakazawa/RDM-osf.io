@@ -380,7 +380,7 @@ ADDONS_OAUTH.append('s3compat')
 INSTALLED_APPS += ('addons.s3compatb3',)
 ADDONS_FOLDER_CONFIGURABLE.append('s3compatb3')
 ADDONS_OAUTH.append('s3compatb3')
-INSTALLED_APPS += ('addons.nextcloud',)
+#INSTALLED_APPS += ('addons.nextcloud',)
 ADDONS_FOLDER_CONFIGURABLE.append('nextcloud')
 ADDONS_OAUTH.append('nextcloud')
 
