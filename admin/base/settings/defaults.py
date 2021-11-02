@@ -133,7 +133,7 @@ INSTALLED_APPS = (
     'addons.onedrive',
     'addons.iqbrims',
     'addons.dropboxbusiness',
-    'addons.nextcloudinstitutions',
+    # 'addons.nextcloudinstitutions',
     'addons.s3compatinstitutions',
     'addons.ociinstitutions',
 )
@@ -162,12 +162,12 @@ MIGRATION_MODULES = {
     'addons_weko': None,
     'addons_s3compat': None,
     'addons_s3compatb3': None,
-    'addons_nextcloud': None,
+    # 'addons_nextcloud': None,
     'addons_gitlab': None,
     'addons_onedrive': None,
     'addons_iqbrims': None,
     'addons_dropboxbusiness': None,
-    'addons_nextcloudinstitutions': None,
+    # 'addons_nextcloudinstitutions': None,
     'addons_s3compatinstitutions': None,
     'addons_ociinstitutions': None,
 }
@@ -178,7 +178,7 @@ UNSUPPORTED_FORCE_TO_USE_ADDONS = [
     'weko',
     's3compat',
     's3compatb3',
-    'nextcloud',
+    # 'nextcloud',
     'gitlab',
     'onedrive',
     'iqbrims'

@@ -121,7 +121,7 @@ INSTALLED_APPS = (
     'addons.jupyterhub',
     'addons.iqbrims',
     'addons.dropboxbusiness',
-    'addons.nextcloudinstitutions',
+    # 'addons.nextcloudinstitutions',
     'addons.s3compatinstitutions',
     'addons.ociinstitutions',
     'addons.binderhub',
@@ -381,8 +381,8 @@ INSTALLED_APPS += ('addons.s3compatb3',)
 ADDONS_FOLDER_CONFIGURABLE.append('s3compatb3')
 ADDONS_OAUTH.append('s3compatb3')
 #INSTALLED_APPS += ('addons.nextcloud',)
-ADDONS_FOLDER_CONFIGURABLE.append('nextcloud')
-ADDONS_OAUTH.append('nextcloud')
+# ADDONS_FOLDER_CONFIGURABLE.append('nextcloud')
+# ADDONS_OAUTH.append('nextcloud')
 
 TST_COMMAND_DELIMITER = ' '
 # RSA key generation settings
