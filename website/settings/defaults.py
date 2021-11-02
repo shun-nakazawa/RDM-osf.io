@@ -11,6 +11,7 @@ import hashlib
 import logging
 from datetime import timedelta
 from collections import OrderedDict
+import enum
 
 os_env = os.environ
 
@@ -197,6 +198,9 @@ MAILGUN_API_KEY = None
 # Use Celery for file rendering
 USE_CELERY = True
 
+# Trashed File Retention
+PURGE_DELTA = timedelta(days=30)
+
 # TODO: Override in local.py in production
 DB_HOST = 'localhost'
 DB_PORT = os_env.get('OSF_DB_PORT', 27017)
@@ -334,13 +338,11 @@ DOI_URL_PREFIX = 'https://doi.org/'
 DOI_FORMAT = '{prefix}/osf.io/{guid}'
 
 # datacite
+DATACITE_ENABLED = True
 DATACITE_USERNAME = None
 DATACITE_PASSWORD = None
-DATACITE_URL = None
+DATACITE_URL = 'https://mds.datacite.org'
 DATACITE_PREFIX = '10.70102'  # Datacite's test DOI prefix -- update in production
-# Minting DOIs only works on Datacite's production server, so
-# disable minting on staging and development environments by default
-DATACITE_MINT_DOIS = not DEV_MODE
 
 # crossref
 CROSSREF_USERNAME = None
@@ -359,10 +361,11 @@ CROSSREF_JSON_API_URL = 'https://api.crossref.org/'
 
 
 # Leave as `None` for production, test/staging/local envs must set
-SHARE_PREPRINT_PROVIDER_PREPEND = None
+SHARE_PROVIDER_PREPEND = None
 
+SHARE_ENABLED = True  # This should be False for most local development
 SHARE_REGISTRATION_URL = ''
-SHARE_URL = None
+SHARE_URL = 'https://share.osf.io/'
 SHARE_API_TOKEN = None  # Required to send project updates to SHARE
 
 CAS_SERVER_URL = 'http://localhost:8080'
@@ -374,6 +377,7 @@ ARCHIVE_PROVIDER = 'osfstorage'
 MAX_ARCHIVE_SIZE = 5 * 1024 ** 3  # == math.pow(1024, 3) == 1 GB
 
 ARCHIVE_TIMEOUT_TIMEDELTA = timedelta(1)  # 24 hours
+STUCK_FILES_DELETE_TIMEOUT = timedelta(days=45) # Registration files stuck for x days are marked as deleted.
 
 ENABLE_ARCHIVER = True
 
@@ -418,12 +422,18 @@ class CeleryConfig:
         'scripts.analytics.run_keen_snapshots',
         'scripts.analytics.run_keen_events',
         'scripts.clear_sessions',
+        'osf.management.commands.delete_withdrawn_or_failed_registration_files',
         'osf.management.commands.check_crossref_dois',
+        'osf.management.commands.find_spammy_files',
         'osf.management.commands.migrate_pagecounter_data',
         'osf.management.commands.migrate_deleted_date',
         'osf.management.commands.addon_deleted_date',
         'osf.management.commands.migrate_registration_responses',
-        'osf.management.commands.update_institution_project_counts'
+        'osf.management.commands.archive_registrations_on_IA'
+        'osf.management.commands.sync_collection_provider_indices',
+        'osf.management.commands.sync_datacite_doi_metadata',
+        'osf.management.commands.update_institution_project_counts',
+        'osf.management.commands.populate_branched_from'
     }
 
     med_pri_modules = {
@@ -483,7 +493,7 @@ class CeleryConfig:
     imports = (
         'framework.celery_tasks',
         'framework.email.tasks',
-        'osf.external.tasks',
+        'osf.external.chronos.tasks',
         'osf.management.commands.data_storage_usage',
         'osf.management.commands.registration_schema_metrics',
         'website.mailchimp_utils',
@@ -509,7 +519,13 @@ class CeleryConfig:
         'scripts.add_missing_identifiers_to_preprints',
         'osf.management.commands.deactivate_requested_accounts',
         'osf.management.commands.check_crossref_dois',
+        'osf.management.commands.find_spammy_files',
         'osf.management.commands.update_institution_project_counts',
+        'osf.management.commands.correct_registration_moderation_states',
+        'osf.management.commands.sync_collection_provider_indices',
+        'osf.management.commands.sync_datacite_doi_metadata',
+        'osf.management.commands.archive_registrations_on_IA',
+        'api.providers.tasks',
         'nii.mapcore_refresh_tokens',
     )
 
@@ -637,6 +653,10 @@ class CeleryConfig:
             #   'task': 'management.commands.addon_deleted_date',
             #   'schedule': crontab(minute=0, hour=3),  # Daily 11:00 p.m.
             # },
+            # 'populate_branched_from': {
+            #   'task': 'management.commands.populate_branched_from',
+            #   'schedule': crontab(minute=0, hour=3),
+            # },
             'generate_sitemap': {
                 'task': 'scripts.generate_sitemap',
                 'schedule': crontab(minute=0, hour=5),  # Daily 12:00 a.m.
@@ -652,6 +672,26 @@ class CeleryConfig:
             'update_institution_project_counts': {
                 'task': 'management.commands.update_institution_project_counts',
                 'schedule': crontab(minute=0, hour=9), # Daily 05:00 a.m. EDT
+            },
+#            'archive_registrations_on_IA': {
+#                'task': 'osf.management.commands.archive_registrations_on_IA',
+#                'schedule': crontab(minute=0, hour=5),  # Daily 4:00 a.m.
+#                'kwargs': {'dry_run': False}
+#            },
+            'delete_withdrawn_or_failed_registration_files': {
+                'task': 'management.commands.delete_withdrawn_or_failed_registration_files',
+                'schedule': crontab(minute=0, hour=5),  # Daily 12 a.m
+                'kwargs': {
+                    'dry_run': False,
+                    'batch_size_withdrawn': 10,
+                    'batch_size_stuck': 10
+                }
+            },
+            'monitor_registration_bulk_upload_jobs': {
+                'task': 'api.providers.tasks.monitor_registration_bulk_upload_jobs',
+                # 'schedule': crontab(hour='*/3'),  # Every 3 hours
+                'schedule': crontab(minute='*/5'),  # Every 5 minutes for staging server QA test
+                'kwargs': {'dry_run': False}
             },
             'mapcore_refresh_token': {
                 'task': 'nii.mapcore_refresh_tokens',
@@ -832,6 +872,8 @@ BLACKLISTED_DOMAINS = [
     'bigstring.com',
     'binkmail.com',
     'bio-muesli.net',
+    'biojuris.com',
+    'biyac.com',
     'bladesmail.net',
     'bloatbox.com',
     'bobmail.info',
@@ -1124,6 +1166,7 @@ BLACKLISTED_DOMAINS = [
     'giantmail.de',
     'girlsundertheinfluence.com',
     'gishpuppy.com',
+    'gmailwe.com',
     'gmial.com',
     'goemailgo.com',
     'gorillaswithdirtyarmpits.com',
@@ -1249,6 +1292,7 @@ BLACKLISTED_DOMAINS = [
     'labetteraverouge.at',
     'lackmail.net',
     'lags.us',
+    'laldo.com',
     'landmail.co',
     'lastmail.co',
     'lawlita.com',
@@ -1270,6 +1314,7 @@ BLACKLISTED_DOMAINS = [
     'lookugly.com',
     'lopl.co.cc',
     'lortemail.dk',
+    'losbanosforeclosures.com',
     'lovemeleaveme.com',
     'lr78.com',
     'lroid.com',
@@ -1396,6 +1441,7 @@ BLACKLISTED_DOMAINS = [
     'monemail.fr.nf',
     'monmail.fr.nf',
     'monumentmail.com',
+    'moyencuen.buzz',
     'msa.minsmail.com',
     'mt2009.com',
     'mt2014.com',
@@ -1412,6 +1458,7 @@ BLACKLISTED_DOMAINS = [
     'mypacks.net',
     'mypartyclip.de',
     'myphantomemail.com',
+    'myrambler.ru',
     'mysamp.de',
     'myspaceinc.com',
     'myspaceinc.net',
@@ -1455,6 +1502,7 @@ BLACKLISTED_DOMAINS = [
     'nospamthanks.info',
     'notmailinator.com',
     'notsharingmy.info',
+    'notvn.com',
     'nowhere.org',
     'nowmymail.com',
     'nurfuerspam.de',
@@ -1509,6 +1557,7 @@ BLACKLISTED_DOMAINS = [
     'qq.com',
     'quickinbox.com',
     'quickmail.nl',
+    'rambler.ru',
     'rainmail.biz',
     'rcpt.at',
     're-gister.com',
@@ -1540,6 +1589,7 @@ BLACKLISTED_DOMAINS = [
     'sayawaka-dea.info',
     'saynotospams.com',
     'scatmail.com',
+    'sciencejrq.com',
     'schafmail.de',
     'schrott-email.de',
     'secretemail.de',
@@ -1655,6 +1705,7 @@ BLACKLISTED_DOMAINS = [
     'spoofmail.de',
     'spybox.de',
     'squizzy.de',
+    'srcitation.com',
     'ssoia.com',
     'startkeys.com',
     'stexsy.com',
@@ -1823,6 +1874,7 @@ BLACKLISTED_DOMAINS = [
     'wem.com',
     'wetrainbayarea.com',
     'wetrainbayarea.org',
+    'wifimaple.com',
     'wh4f.org',
     'whatiaas.com',
     'whatpaas.com',
@@ -1842,6 +1894,7 @@ BLACKLISTED_DOMAINS = [
     'wwwnew.eu',
     'wzukltd.com',
     'xagloo.com',
+    'xakw1.com',
     'xemaps.com',
     'xents.com',
     'xmaily.com',
@@ -1890,12 +1943,23 @@ RECAPTCHA_VERIFY_URL = 'https://recaptcha.net/recaptcha/api/siteverify'
 
 # akismet spam check
 AKISMET_APIKEY = None
+AKISMET_ENABLED = False
+
+# OOPSpam options
+OOPSPAM_APIKEY = None
+OOPSPAM_SPAM_LEVEL = 3  # The minimum level (out of 6) that is flagged as spam.
+OOPSPAM_CHECK_IP = True  # Whether OOPSpam checks IP addresses. When testing locally, turn this off
+
+# spam options
 SPAM_CHECK_ENABLED = False
 SPAM_CHECK_PUBLIC_ONLY = True
 SPAM_ACCOUNT_SUSPENSION_ENABLED = False
 SPAM_ACCOUNT_SUSPENSION_THRESHOLD = timedelta(hours=24)
 SPAM_FLAGGED_MAKE_NODE_PRIVATE = False
 SPAM_FLAGGED_REMOVE_FROM_SEARCH = False
+SPAM_AUTOBAN_IP_BLOCK = True
+SPAM_THROTTLE_AUTOBAN = True
+SPAM_CREATION_THROTTLE_LIMIT = 5
 
 SHARE_API_TOKEN = None
 
@@ -1979,6 +2043,63 @@ DS_METRICS_OSF_TOKEN = None
 DS_METRICS_BASE_FOLDER = None
 REG_METRICS_OSF_TOKEN = None
 REG_METRICS_BASE_FOLDER = None
+
+STORAGE_WARNING_THRESHOLD = .9  # percent of maximum storage used before users get a warning message
+STORAGE_LIMIT_PUBLIC = 50
+STORAGE_LIMIT_PRIVATE = 5
+
+GBs = 10 ** 9
+
+
+#  Needs to be here so the enum can be used in the admin template
+def forDjango(cls):
+    cls.do_not_call_in_templates = True
+    return cls
+
+@forDjango
+@enum.unique
+class StorageLimits(enum.IntEnum):
+    """
+    Values here are in GBs
+    """
+    NOT_CALCULATED = 0
+    DEFAULT = 1
+    APPROACHING_PRIVATE = 2
+    OVER_PRIVATE = 3
+    APPROACHING_PUBLIC = 4
+    OVER_PUBLIC = 5
+
+
+    @classmethod
+    def from_node_usage(cls,  usage_bytes, private_limit=None, public_limit=None):
+        """ This should indicate if a node is at or over a certain storage threshold indicating a status."""
+
+        public_limit = public_limit or STORAGE_LIMIT_PUBLIC
+        private_limit = private_limit or STORAGE_LIMIT_PRIVATE
+
+        if usage_bytes is None:
+            return cls.NOT_CALCULATED
+        if usage_bytes >= float(public_limit) * GBs:
+            return cls.OVER_PUBLIC
+        elif usage_bytes >= float(public_limit) * STORAGE_WARNING_THRESHOLD * GBs:
+            return cls.APPROACHING_PUBLIC
+        elif usage_bytes >= float(private_limit) * GBs:
+            return cls.OVER_PRIVATE
+        elif usage_bytes >= float(private_limit) * STORAGE_WARNING_THRESHOLD * GBs:
+            return cls.APPROACHING_PRIVATE
+        else:
+            return cls.DEFAULT
+
+STORAGE_USAGE_CACHE_TIMEOUT = 3600 * 24  # seconds in hour times hour (one day)
+IA_ARCHIVE_ENABLED = True
+OSF_PIGEON_URL = os.environ.get('OSF_PIGEON_URL', None)
+ID_VERSION = 'staging_v2'
+IA_ROOT_COLLECTION = 'cos-dev-sandbox'
+PIGEON_CALLBACK_BEARER_TOKEN = os.getenv('PIGEON_CALLBACK_BEARER_TOKEN')
+
+PRODUCT_OWNER_EMAIL_ADDRESS = {}
+
+CAS_LOG_LEVEL = 3  # ERROR
 
 ### NII extensions
 

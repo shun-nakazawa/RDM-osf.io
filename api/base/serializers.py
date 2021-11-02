@@ -28,6 +28,7 @@ from api.base.versioning import KEBAB_CASE_VERSION, get_kebab_snake_case_field
 
 from osf.models.validators import SwitchValidator
 
+
 def get_meta_type(serializer_class, request):
     meta = getattr(serializer_class, 'Meta', None)
     if meta is None:
@@ -257,6 +258,18 @@ class HideIfWikiDisabled(ConditionalField):
         has_wiki_addon = instance.has_wiki_addon if hasattr(instance, 'has_wiki_addon') else instance.has_addon('wiki')
         return not utils.is_deprecated(request.version, min_version='2.8') and not has_wiki_addon
 
+class HideIfWithdrawalOrWikiDisabled(ConditionalField):
+    """
+    If wiki is disabled or registration is withdrawn, don't show relationship field, only available after 2.7
+    """
+
+    def should_hide(self, instance):
+        request = self.context.get('request')
+        has_wiki_addon = instance.has_wiki_addon if hasattr(instance, 'has_wiki_addon') else instance.has_addon('wiki')
+        return instance.is_retracted or (not utils.is_deprecated(request.version, min_version='2.8') and not has_wiki_addon)
+
+    def should_be_none(self, instance):
+        return not isinstance(self.field, RelationshipField)
 
 class HideIfNotNodePointerLog(ConditionalField):
     """
@@ -738,6 +751,9 @@ class RelationshipField(ser.HyperlinkedIdentityField):
             kwargs_retrieval[lookup_url_kwarg] = lookup_value
         return kwargs_retrieval
 
+    def _handle_callable_view(self, obj, view):
+        return view(getattr(obj, self.field_name))
+
     # Overrides HyperlinkedIdentityField
     def get_url(self, obj, view_name, request, format):
         urls = {}
@@ -750,7 +766,7 @@ class RelationshipField(ser.HyperlinkedIdentityField):
                     urls[view_name] = {}
                 else:
                     if callable(view):
-                        view = view(getattr(obj, self.field_name))
+                        view = self._handle_callable_view(obj, view)
                     if request.parser_context['kwargs'].get('version', False):
                         kwargs.update({'version': request.parser_context['kwargs']['version']})
                     url = self.reverse(view, kwargs=kwargs, request=request, format=format)
@@ -877,11 +893,11 @@ class RelationshipField(ser.HyperlinkedIdentityField):
             related_class = resolved_url.func.view_class
             if issubclass(related_class, RetrieveModelMixin):
                 try:
-                    related_type = resolved_url.namespace
+                    related_type = resolved_url.namespace.split(':')[-1]
                     # TODO: change kwargs to preprint_provider_id and registration_id
-                    if related_type == 'preprint_providers':
+                    if related_type in ('preprint_providers', 'preprint-providers', 'registration-providers'):
                         related_id = resolved_url.kwargs['provider_id']
-                    elif related_type == 'registrations':
+                    elif related_type in ('registrations', 'draft_nodes'):
                         related_id = resolved_url.kwargs['node_id']
                     elif related_type == 'schemas' and related_class.view_name == 'registration-schema-detail':
                         related_id = resolved_url.kwargs['schema_id']
@@ -1179,16 +1195,46 @@ class WaterbutlerLink(Link):
             return url
 
 
-class NodeFileHyperLinkField(RelationshipField):
+class RelatedLambdaRelationshipField(RelationshipField):
+    """
+    An extension of a RelationshipField which enables the use of a lambda
+    function to determine the related_view where the argument of the lambda
+    function is an attribute, distinct from the field name, on the serialized object.
+
+    e.g. (NodeFileHyperLinkField extends this class)
+    files = NodeFileHyperLinkField(
+        related_view=lambda node: 'draft_nodes:node-files' if getattr(node, 'type', False) == 'osf.draftnode' else 'nodes:node-files',
+        view_lambda_argument='target',
+        related_view_kwargs={'node_id': '<target._id>', 'path': '<path>', 'provider': '<provider>'},
+        kind='folder',
+    )
+    In a standard RelationshipField, the lambda for the related_view would fail to evaluate because
+    the argument would be <serialized_object>.files while the lambda's argument should be <serialized_object.target>.
+    This class uses the `view_lambda_argument` to determine the attribute on the serialized object to use
+    as the argument for the lambda function.
+    """
+
+    def __init__(self, view_lambda_argument=None, **kws):
+        self.view_lambda_argument = view_lambda_argument
+        super().__init__(**kws)
+
+    def get_attribute(self, instance):
+        return instance
+
+    def _handle_callable_view(self, obj, view):
+        return view(getattr(obj, self.view_lambda_argument))
+
+
+class NodeFileHyperLinkField(RelatedLambdaRelationshipField):
     def __init__(self, kind=None, never_embed=False, **kws):
         self.kind = kind
         self.never_embed = never_embed
-        super(NodeFileHyperLinkField, self).__init__(**kws)
+        super().__init__(**kws)
 
     def get_url(self, obj, view_name, request, format):
         if self.kind and obj.kind != self.kind:
             raise SkipField
-        return super(NodeFileHyperLinkField, self).get_url(obj, view_name, request, format)
+        return super().get_url(obj, view_name, request, format)
 
 
 class JSONAPIListSerializer(ser.ListSerializer):

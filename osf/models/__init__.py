@@ -47,7 +47,7 @@ from osf.models.banner import ScheduledBanner  # noqa
 from osf.models.quickfiles import QuickFilesNode  # noqa
 from osf.models.dismissed_alerts import DismissedAlert  # noqa
 from osf.models.action import ReviewAction  # noqa
-from osf.models.action import NodeRequestAction, PreprintRequestAction, ReviewAction  # noqa
+from osf.models.action import NodeRequestAction, PreprintRequestAction, ReviewAction, RegistrationAction, SchemaResponseAction, BaseAction  # noqa
 from osf.models.storage import ProviderAssetFile  # noqa
 from osf.models.chronos import ChronosJournal, ChronosSubmission  # noqa
 from osf.models.blacklisted_email_domain import BlacklistedEmailDomain  # noqa
@@ -63,3 +63,7 @@ from osf.models.fileinfo import FileInfo  # noqa
 from osf.models.user_quota import UserQuota  # noqa
 from osf.models.project_storage_type import ProjectStorageType  # noqa
 from osf.models.region_external_account import RegionExternalAccount  # noqa
+from osf.models.schema_response import SchemaResponse  # noqa
+from osf.models.schema_response_block import SchemaResponseBlock  # noqa
+from osf.models.registration_bulk_upload_job import RegistrationBulkUploadJob  # noqa
+from osf.models.registration_bulk_upload_row import RegistrationBulkUploadRow  # noqa

@@ -22,3 +22,7 @@ class MultiEmailField(forms.Field):
 
 class ImportFileForm(forms.Form):
     file = forms.FileField(label=_('File'))
+
+
+class ArchiveRegistrationWithPigeonForm(forms.Form):
+    guid_to_archive = forms.CharField(label='guid_to_archive', min_length=5, max_length=1024, required=False)

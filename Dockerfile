@@ -8,6 +8,12 @@ RUN set -x \
     && adduser -h /var/www -u 82 -D -S -G www-data www-data
 
 RUN apk add --no-cache --virtual .run-deps \
+<<<<<<< HEAD
+=======
+    gcc \
+    g++ \
+    python3-dev \
+>>>>>>> 21.07.6
     libxslt-dev \
     su-exec \
     bash \
@@ -31,6 +37,10 @@ RUN apk add --no-cache --virtual .run-deps \
     openssl \
     curl \
     && yarn global add bower
+
+RUN apk add curl
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+RUN python3 get-pip.py --force-reinstall pip==21.0
 
 WORKDIR /code
 

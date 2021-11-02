@@ -1,5 +1,6 @@
 <%!
     from website import settings
+    from datetime import datetime
 %>
 <!doctype html>
 <html class="no-js" lang="">
@@ -16,12 +17,14 @@
             <td style="border-collapse: collapse;">
                 <table id="layout-table" width="100%" border="0" cellpadding="10" cellspacing="0" height="100%">
                     <tbody>
-                        <tr class="banner" style="background: #214762;color: white;">
+                        <tr class="banner" style="background: ${context.get('top_bar_color', '#214762')};color: white;">
                             <td class="text-center" style="border-collapse: collapse;text-align: center;">
                                 <table id="header-logo" border="0" style="margin: 0 auto;padding: 0px;">
                                     <tr>
                                         <td style="border-collapse: collapse;">
-                                            % if context.get('logo', settings.OSF_LOGO) not in settings.OSF_LOGO_LIST:
+											% if context.get('logo_url'):
+                                                <img src="${logo_url}" alt="${provider_name} logo" style="border: 0;height: auto;line-height: 100%;outline: none;text-decoration: none;max-height: 100px;">
+                                            % elif context.get('logo', settings.OSF_LOGO) not in settings.OSF_LOGO_LIST:
                                                 <img src="https://raw.githubusercontent.com/CenterForOpenScience/osf-assets/master/files/preprints-assets/${context.get('logo')}/wide_white.png" alt="GakuNin RDM logo" style="border: 0;height: auto;line-height: 100%;outline: none;text-decoration: none;">
                                             %else:
                                                 <img src="https://rdm.nii.ac.jp/static/img/${context.get('logo', settings.OSF_LOGO)}.png" alt="GakuNin RDM logo" style="border: 0;height: auto;line-height: 100%;outline: none;text-decoration: none;">
@@ -98,7 +101,7 @@
                     <tbody>
                         <tr>
                             <td style="border-collapse: collapse;">
-                                <p class="text-smaller text-center" style="text-align: center;font-size: 12px;">Copyright &copy; 2016-2020 国立情報学研究所 |
+                                <p class="text-smaller text-center" style="text-align: center;font-size: 12px;">Copyright &copy; ${datetime.utcnow().year} 国立情報学研究所 |
                                     <a href="https://meatwiki.nii.ac.jp/confluence/pages/viewpage.action?pageId=32676422">プライバシーポリシー</a>
                                 </p>
                                 <p class="text-smaller text-center" style="text-align: center;font-size: 12px;">〒101-8430 東京都千代田区一ツ橋2-1-2</p>

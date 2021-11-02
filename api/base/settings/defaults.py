@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 import os
 from future.moves.urllib.parse import urlparse
 from website import settings as osf_settings
+from corsheaders.defaults import default_headers
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Quick-start development settings - unsuitable for production
@@ -207,6 +208,8 @@ REST_FRAMEWORK = {
         'test-anon': '1/hour',
         'send-email': '2/minute',
         'burst': '10/second',
+        'files': '75/minute',
+        'files-burst': '3/second',
     },
 }
 
@@ -220,6 +223,11 @@ CORS_ORIGIN_WHITELIST = (
 # This needs to remain True to allow cross origin requests that are in CORS_ORIGIN_WHITELIST to
 # use cookies.
 CORS_ALLOW_CREDENTIALS = True
+# Allow 'cache-control' in addition to default request headers
+# to enable file upload using dropzone.js
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'cache-control',
+]
 # Set dynamically on app init
 ORIGINS_WHITELIST = ()
 
@@ -332,6 +340,7 @@ ELASTICSEARCH_METRICS_DATE_FORMAT = '%Y'
 
 WAFFLE_CACHE_NAME = 'waffle_cache'
 STORAGE_USAGE_CACHE_NAME = 'storage_usage'
+STORAGE_USAGE_MAX_ENTRIES = 10000000
 
 
 CACHES = {
@@ -341,6 +350,9 @@ CACHES = {
     STORAGE_USAGE_CACHE_NAME: {
         'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
         'LOCATION': 'osf_cache_table',
+        'OPTIONS': {
+            'MAX_ENTRIES': STORAGE_USAGE_MAX_ENTRIES,
+        },
     },
     WAFFLE_CACHE_NAME: {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',

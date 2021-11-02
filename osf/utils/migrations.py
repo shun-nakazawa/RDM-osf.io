@@ -7,6 +7,7 @@ import logging
 import warnings
 from math import ceil
 
+
 from contextlib import contextmanager
 from django.apps import apps
 from django.db import connection
@@ -15,7 +16,7 @@ from django.db.migrations.operations.base import Operation
 from osf.models.base import generate_object_id
 from osf.utils.sanitize import strip_html, unescape_entities
 from website import settings
-from website.project.metadata.schemas import OSF_META_SCHEMAS
+from website.project.metadata.schemas import get_osf_meta_schemas
 
 
 logger = logging.getLogger(__file__)
@@ -159,17 +160,16 @@ def remove_licenses(*args):
 def ensure_schemas(*args):
     """Import meta-data schemas from JSON to database if not already loaded
     """
+    state = args[0] if args else apps
     schema_count = 0
     try:
-        RegistrationSchema = args[0].get_model('osf', 'registrationschema')
-    except Exception:
-        try:
-            RegistrationSchema = args[0].get_model('osf', 'metaschema')
-        except Exception:
-            # Working outside a migration
-            from osf.models import RegistrationSchema
-    for schema in OSF_META_SCHEMAS:
-        schema_obj, created = RegistrationSchema.objects.update_or_create(
+        schema_model = state.get_model('osf', 'registrationschema')
+    except LookupError:
+        # Use MetaSchema model if migrating from a version before RegistrationSchema existed
+        schema_model = state.get_model('osf', 'metaschema')
+
+    for schema in get_osf_meta_schemas():
+        schema_obj, created = schema_model.objects.update_or_create(
             name=schema['name'],
             schema_version=schema.get('version', 1),
             defaults={
@@ -197,9 +197,10 @@ def create_schema_block(state, schema_id, block_type, display_text='', required=
     """
     For mapping schemas to schema blocks: creates a given block from the specified parameters
     """
-    RegistrationSchemaBlock = state.get_model('osf', 'registrationschemablock')
+    state = state or apps
+    schema_block_model = state.get_model('osf', 'registrationschemablock')
 
-    return RegistrationSchemaBlock.objects.create(
+    return schema_block_model.objects.create(
         schema_id=schema_id,
         block_type=block_type,
         required=required,
@@ -266,7 +267,7 @@ def find_title_description_help_example(rs, question):
     title = question.get('title', '')
     description = strip_html(question.get('description', ''))
     help = strip_html(question.get('help', ''))
-    example = ''
+    example = strip_html(question.get('example', ''))
 
     schema_name = rs.schema.get('name', '')
     # Descriptions that contain any of these keywords
@@ -289,7 +290,7 @@ def find_title_description_help_example(rs, question):
     ]
 
     if title:
-        if schema_name in ['OSF Preregistration', 'Prereg Challenge']:
+        if schema_name in ['OSF Preregistration', 'Prereg Challenge', 'Secondary Data Preregistration']:
             # These two schemas have clear "example" text in the "help" section
             example = help
             help = description
@@ -373,20 +374,76 @@ def create_schema_blocks_for_question(state, rs, question, sub=False):
                 schema_block_group_key=schema_block_group_key,
             )
 
-        # Creates question input block - this block will correspond to an answer
-        # Map the original schema section format to the new block_type, and create a schema block
-        block_type = FORMAT_TYPE_TO_TYPE_MAP[(question.get('format'), question.get('type'))]
-        create_schema_block(
-            state,
-            rs.id,
-            block_type,
-            required=question.get('required', False),
-            schema_block_group_key=schema_block_group_key,
-            registration_response_key=get_registration_response_key(question)
-        )
+        if question.get('format') or question.get('type'):
+            # Creates question input block - this block will correspond to an answer
+            # Map the original schema section format to the new block_type, and create a schema block
+            block_type = FORMAT_TYPE_TO_TYPE_MAP[(question.get('format'), question.get('type'))]
+            create_schema_block(
+                state,
+                rs.id,
+                block_type,
+                required=question.get('required', False),
+                schema_block_group_key=schema_block_group_key,
+                registration_response_key=get_registration_response_key(question)
+            )
 
         # If there are multiple choice answers, create blocks for these as well.
         split_options_into_blocks(state, rs, question, schema_block_group_key)
+
+def create_schema_blocks_for_atomic_schema(schema):
+    """
+    Atomic schemas are a short cut around making an typical metaschemas by being totally explict about the schemablocks
+    being created.
+    """
+
+    from osf.models import RegistrationSchemaBlock
+    current_group_key = None
+    grouped_block_types = RegistrationSchemaBlock.INPUT_BLOCK_TYPES.union(
+        {'select-input-option', 'select-input-other'}
+    )
+
+    for index, block in enumerate(schema.schema['blocks']):
+        # Not all block types use all '*_text' fields, so provide an easy default
+        for optional_text_field in ['display_text', 'help_text', 'example_text']:
+            block[optional_text_field] = block.get(optional_text_field, '')
+
+        block_type = block['block_type']
+
+        # Each 'question-label' generates a 'schema_block_group_key' that is inherited
+        # By all input and input-option blocks until the next question-label appears
+        if block_type == 'question-label':
+            current_group_key = generate_object_id()
+            block['schema_block_group_key'] = current_group_key
+        elif block_type in grouped_block_types:
+            block['schema_block_group_key'] = current_group_key
+        else:
+            block['schema_block_group_key'] = ''
+
+        # Input blocks define a 'registration_response_key', while it is NULL for all other blocks
+        # Either honor a provided key or auto-generate one based on the block's index
+        if block_type in RegistrationSchemaBlock.INPUT_BLOCK_TYPES:
+            if not block.get('registration_response_key'):
+                block['registration_response_key'] = f'{schema.id}-{index}'
+        else:  # Ignore any improperly-supplied registration_response_key
+            block['registration_response_key'] = None
+
+        RegistrationSchemaBlock.objects.create(
+            schema_id=schema.id,
+            **block
+        )
+
+def map_schema_to_schemablocks(rs, state=None):
+    for page in rs.schema['pages']:
+        # Create page heading block
+        create_schema_block(
+            state,
+            rs.id,
+            'page-heading',
+            display_text=strip_html(page.get('title', '')),
+            help_text=strip_html(page.get('description', ''))
+        )
+        for question in page['questions']:
+            create_schema_blocks_for_question(state, rs, question)
 
 
 def map_schemas_to_schemablocks(*args):
@@ -394,21 +451,22 @@ def map_schemas_to_schemablocks(*args):
 
     WARNING: Deletes existing schema blocks
     """
-    state = args[0]
+    state = args[0] if args else apps
     try:
-        RegistrationSchema = state.get_model('osf', 'registrationschema')
-    except Exception:
-        try:
-            RegistrationSchema = state.get_model('osf', 'metaschema')
-        except Exception:
-            # Working outside a migration
-            from osf.models import RegistrationSchema
+        schema_model = state.get_model('osf', 'registrationschema')
+    except LookupError:
+        # Use MetaSchema model if migrating from a version before RegistrationSchema existed
+        schema_model = state.get_model('osf', 'metaschema')
 
     # Delete all existing schema blocks (avoid creating duplicates)
     unmap_schemablocks(*args)
 
-    for rs in RegistrationSchema.objects.all():
-        logger.info('Migrating schema {}, version {} to schema blocks.'.format(rs.schema.get('name'), rs.schema_version))
+    for rs in schema_model.objects.all():
+        logger.info('Migrating schema {}, version {} to schema blocks.'.format(rs.name, rs.schema_version))
+        if rs.schema.get('atomicSchema'):
+            create_schema_blocks_for_atomic_schema(rs)
+            continue
+
         for page in rs.schema['pages']:
             # Create page heading block
             create_schema_block(
@@ -423,9 +481,10 @@ def map_schemas_to_schemablocks(*args):
 
 
 def unmap_schemablocks(*args):
-    state = args[0]
-    RegistrationSchemaBlock = state.get_model('osf', 'registrationschemablock')
-    RegistrationSchemaBlock.objects.all().delete()
+    state = args[0] if args else apps
+    schema_block_model = state.get_model('osf', 'registrationschemablock')
+
+    schema_block_model.objects.all().delete()
 
 
 class UpdateRegistrationSchemas(Operation):

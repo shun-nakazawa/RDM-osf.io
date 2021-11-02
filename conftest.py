@@ -1,9 +1,11 @@
 from __future__ import print_function
+import os
 
 import logging
-import responses
 
+import re
 import mock
+import responses
 import pytest
 from faker import Factory
 from website import settings as website_settings
@@ -12,6 +14,7 @@ from framework.celery_tasks import app as celery_app
 
 from elasticsearch_dsl.connections import connections
 from django.core.management import call_command
+import xml.etree.ElementTree as ET
 
 logger = logging.getLogger(__name__)
 
@@ -156,14 +159,108 @@ def _es_marker(request, es6_client):
 
 
 @pytest.fixture
+def mock_share():
+    with mock.patch('api.share.utils.settings.SHARE_ENABLED', True):
+        with mock.patch('api.share.utils.settings.SHARE_API_TOKEN', 'mock-api-token'):
+            with responses.RequestsMock(assert_all_requests_are_fired=True) as rsps:
+                rsps.add(responses.POST, f'{website_settings.SHARE_URL}api/v2/normalizeddata/', status=200)
+                yield rsps
+
+
+@pytest.fixture
 def mock_akismet():
     """
     This should be used to mock our anti-spam service akismet.
-    Relevent endpoints:
-    'https://{api_key}.rest.akismet.com/1.1/submit-spam'
-    'https://{api_key}.rest.akismet.com/1.1/submit-ham'
-    'https://{api_key}.rest.akismet.com/1.1/comment-check'
+    Relevant endpoints:
+    f'https://{api_key}.rest.akismet.com/1.1/submit-spam'
+    f'https://{api_key}.rest.akismet.com/1.1/submit-ham'
+    f'https://{api_key}.rest.akismet.com/1.1/comment-check'
     """
     with mock.patch.object(website_settings, 'SPAM_CHECK_ENABLED', True):
-        with responses.RequestsMock(assert_all_requests_are_fired=True) as rsps:
+        with mock.patch.object(website_settings, 'AKISMET_ENABLED', True):
+            with responses.RequestsMock(assert_all_requests_are_fired=True) as rsps:
+                yield rsps
+
+
+@pytest.fixture
+def mock_datacite(registration):
+    """
+    This should be used to mock our our datacite client.
+    Relevant endpoints:
+    f'{DATACITE_URL}/metadata'
+    f'{DATACITE_URL}/doi'
+    f'{DATACITE_URL}/metadata/{doi}'
+    Datacite url should be `https://mds.datacite.org' for production and `https://mds.test.datacite.org` for local
+    testing
+    """
+
+    doi = registration.get_doi_client().build_doi(registration)
+
+    with open(os.path.join('tests', 'identifiers', 'fixtures', 'datacite_post_metadata_response.xml'), 'r') as fp:
+        base_xml = ET.fromstring(fp.read())
+        base_xml.find('{http://datacite.org/schema/kernel-4}identifier').text = doi
+        data = ET.tostring(base_xml)
+
+    with mock.patch.object(website_settings, 'DATACITE_ENABLED', True):
+        with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
+            rsps.add(responses.GET, f'{website_settings.DATACITE_URL}/metadata', body=data, status=200)
+            rsps.add(responses.POST, f'{website_settings.DATACITE_URL}/metadata', body=f'OK ({doi})', status=201)
+            rsps.add(responses.POST, f'{website_settings.DATACITE_URL}/doi', body=f'OK ({doi})', status=201)
+            rsps.add(responses.DELETE, f'{website_settings.DATACITE_URL}/metadata/{doi}', status=200)
             yield rsps
+
+
+@pytest.fixture
+def mock_oopspam():
+    """
+    This should be used to mock our anti-spam service oopspam.
+    Relevent endpoints:
+    'https://oopspam.p.rapidapi.com/v1/spamdetection'
+    """
+    with mock.patch.object(website_settings, 'SPAM_CHECK_ENABLED', True):
+        with mock.patch.object(website_settings, 'OOPSPAM_APIKEY', 'FFFFFF'):
+            with responses.RequestsMock(assert_all_requests_are_fired=True) as rsps:
+                yield rsps
+
+
+@pytest.fixture
+def mock_pigeon():
+    """
+    This should be used to mock our Internet Archive archiving microservice osf-pigeon.
+    Relevent endpoints:
+    '{settings.OSF_PIGEON_URL}archive/{guid}'
+    '{settings.OSF_PIGEON_URL}metadata/{guid}'
+
+    """
+    def request_callback(request):
+        guid = request.url.split('/')[-1]
+        from osf.models import Registration
+        reg = Registration.load(guid)
+        reg.ia_url = 'https://test.ia.url.com'
+        reg.save()
+        return (200, {}, None)
+
+    with mock.patch.object(website_settings, 'IA_ARCHIVE_ENABLED', True):
+        with mock.patch.object(website_settings, 'OSF_PIGEON_URL', 'http://test.pigeon.osf.io/'):
+            with mock.patch('osf.external.internet_archive.tasks.settings.OSF_PIGEON_URL', 'http://test.pigeon.osf.io/'):
+                with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
+                    rsps.add_callback(
+                        method=responses.POST,
+                        url=re.compile(f'{website_settings.OSF_PIGEON_URL}archive/(.*)'),
+                        callback=request_callback
+                    )
+                    rsps.add(
+                        method=responses.POST,
+                        url=re.compile(f'{website_settings.OSF_PIGEON_URL}metadata/(.*)'),
+                        status=200
+                    )
+                    yield rsps
+
+@pytest.fixture
+def mock_celery():
+    """
+    This should only be necessary for postcommit tasks.
+    """
+    with mock.patch.object(website_settings, 'USE_CELERY', True):
+        with mock.patch('osf.external.internet_archive.tasks.enqueue_postcommit_task') as mock_celery:
+            yield mock_celery

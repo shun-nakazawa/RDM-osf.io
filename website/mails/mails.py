@@ -238,17 +238,29 @@ INVITE_DEFAULT = Mail(
     'invite_default',
     subject='You have been added as a contributor to a GakuNin RDM project.'
 )
-INVITE_PREPRINT = lambda template, provider: Mail(
-    'invite_preprints_{}'.format(template),
+INVITE_OSF_PREPRINT = Mail(
+    'invite_preprints_osf',
+    subject='You have been added as a contributor to an OSF preprint.'
+)
+INVITE_PREPRINT = lambda provider: Mail(
+    'invite_preprints',
     subject='You have been added as a contributor to {} {} {}.'.format(get_english_article(provider.name), provider.name, provider.preprint_word)
+)
+INVITE_DRAFT_REGISTRATION = Mail(
+    'invite_draft_registration',
+    subject='You have a new registration draft'
 )
 CONTRIBUTOR_ADDED_DEFAULT = Mail(
     'contributor_added_default',
     subject='GakuNin RDMプロジェクトのメンバーに追加されました / You have been added as a contributor to a GakuNin RDM project.'
 )
-CONTRIBUTOR_ADDED_PREPRINT = lambda template, provider: Mail(
-    'contributor_added_preprints_{}'.format(template),
-    subject='You have been added as a contributor to {} {} {}.'.format(get_english_article(provider.name), provider.name, provider.preprint_word)
+CONTRIBUTOR_ADDED_OSF_PREPRINT = Mail(
+    'contributor_added_preprints_osf',
+    subject='You have been added as a contributor to an OSF preprint.'
+)
+CONTRIBUTOR_ADDED_PREPRINT = lambda provider: Mail(
+    'contributor_added_preprints',
+    subject=f'You have been added as a contributor to {get_english_article(provider.name)} {provider.name} {provider.preprint_word}.'
 )
 CONTRIBUTOR_ADDED_PREPRINT_NODE_FROM_OSF = Mail(
     'contributor_added_preprint_node_from_osf',
@@ -256,7 +268,7 @@ CONTRIBUTOR_ADDED_PREPRINT_NODE_FROM_OSF = Mail(
 )
 CONTRIBUTOR_ADDED_DRAFT_REGISTRATION = Mail(
     'contributor_added_draft_registration',
-    subject='You have been added as a contributor to a draft registration.'
+    subject='You have a new registration draft.'
 )
 MODERATOR_ADDED = lambda provider: Mail(
     'moderator_added',
@@ -274,6 +286,8 @@ FORWARD_INVITE = Mail('forward_invite', subject='Please forward to ${fullname}')
 FORWARD_INVITE_REGISTERED = Mail('forward_invite_registered', subject='Please forward to ${fullname}')
 
 FORGOT_PASSWORD = Mail('forgot_password', subject='Reset Password')
+FORGOT_PASSWORD_INSTITUTION = Mail('forgot_password_institution', subject='Set Password')
+PASSWORD_RESET = Mail('password_reset', subject='Your OSF password has been reset')
 PASSWORD_RESET = Mail('password_reset', subject='Your GakuNin RDM password has been reset')
 PENDING_VERIFICATION = Mail('pending_invite', subject='Your account is almost ready!')
 PENDING_VERIFICATION_REGISTERED = Mail('pending_registered', subject='Received request to be a contributor')
@@ -284,6 +298,10 @@ REQUEST_DEACTIVATION = Mail('support_request', subject='[GakuNin RDM経由]認�
 REQUEST_DEACTIVATION_COMPLETE = Mail('request_deactivation_complete', subject='[via GakuNin RDM] GakuNin RDM account deactivated')
 
 SPAM_USER_BANNED = Mail('spam_user_banned', subject='[GakuNin RDM]アカウントにスパムの疑いがあります / [GakuNin RDM] Account flagged as spam')
+SPAM_FILES_DETECTED = Mail(
+    'spam_files_detected',
+    subject='[auto] Spam files audit'
+)
 
 CONFERENCE_SUBMITTED = Mail(
     'conference_submitted',
@@ -316,7 +334,11 @@ TRANSACTIONAL = Mail(
 # Retraction related Mail objects
 PENDING_RETRACTION_ADMIN = Mail(
     'pending_retraction_admin',
-    subject='Withdrawal pending for one of your projects.'
+    subject='Withdrawal pending for one of your registrations.'
+)
+PENDING_RETRACTION_NON_ADMIN = Mail(
+    'pending_retraction_non_admin',
+    subject='Withdrawal pending for one of your registrations.'
 )
 PENDING_RETRACTION_NON_ADMIN = Mail(
     'pending_retraction_non_admin',
@@ -325,24 +347,24 @@ PENDING_RETRACTION_NON_ADMIN = Mail(
 # Embargo related Mail objects
 PENDING_EMBARGO_ADMIN = Mail(
     'pending_embargo_admin',
-    subject='Registration pending for one of your projects.'
+    subject='Admin decision pending for one of your registrations.'
 )
 PENDING_EMBARGO_NON_ADMIN = Mail(
     'pending_embargo_non_admin',
-    subject='Registration pending for one of your projects.'
+    subject='Admin decision pending for one of your registrations.'
 )
 # Registration related Mail Objects
 PENDING_REGISTRATION_ADMIN = Mail(
     'pending_registration_admin',
-    subject='Registration pending for one of your projects.'
+    subject='Admin decision pending for one of your registrations.'
 )
 PENDING_REGISTRATION_NON_ADMIN = Mail(
     'pending_registration_non_admin',
-    subject='Registration pending for one of your projects.'
+    subject='Admin decision pending for one of your registrations.'
 )
 PENDING_EMBARGO_TERMINATION_ADMIN = Mail(
     'pending_embargo_termination_admin',
-    subject='Request to end an embargo early for one of your projects.'
+    subject='Request to end an embargo early for one of your registrations.'
 )
 PENDING_EMBARGO_TERMINATION_NON_ADMIN = Mail(
     'pending_embargo_termination_non_admin',
@@ -422,16 +444,6 @@ WELCOME_OSF4I = Mail(
 
 EMPTY = Mail('empty', subject='${subject}')
 
-SHARE_ERROR_DESK = Mail(
-    'send_data_share_error_desk',
-    subject='Share Error'
-)
-
-SHARE_PREPRINT_ERROR_DESK = Mail(
-    'send_data_share_preprint_error_desk',
-    subject='Share Error'
-)
-
 REVIEWS_SUBMISSION_CONFIRMATION = Mail(
     'reviews_submission_confirmation',
     subject='Confirmation of your submission to ${provider_name}'
@@ -457,9 +469,9 @@ CROSSREF_DOIS_PENDING = Mail(
     subject='There are ${pending_doi_count} preprints with crossref DOI pending.'
 )
 
-PREPRINT_WITHDRAWAL_REQUEST_GRANTED = Mail(
-    'preprint_withdrawal_request_granted',
-    subject='Your ${reviewable.provider.preprint_word} has been withdrawn',
+WITHDRAWAL_REQUEST_GRANTED = Mail(
+    'withdrawal_request_granted',
+    subject='Your ${document_type} has been withdrawn',
 )
 
 GROUP_MEMBER_ADDED = Mail(
@@ -477,7 +489,75 @@ GROUP_ADDED_TO_NODE = Mail(
     subject='Your group, ${group_name}, has been added to an OSF Project'
 )
 
-PREPRINT_WITHDRAWAL_REQUEST_DECLINED = Mail(
-    'preprint_withdrawal_request_declined',
+WITHDRAWAL_REQUEST_DECLINED = Mail(
+    'withdrawal_request_declined',
     subject='Your withdrawal request has been declined',
+)
+
+TOU_NOTIF = Mail(
+    'tou_notif',
+    subject='Updated Terms of Use for COS Websites and Services',
+)
+
+STORAGE_CAP_EXCEEDED_ANNOUNCEMENT = Mail(
+    'storage_cap_exceeded_announcement',
+    subject='Action Required to avoid disruption to your OSF project',
+)
+
+INSTITUTION_DEACTIVATION = Mail(
+    'institution_deactivation',
+    subject='Your OSF login has changed - here\'s what you need to know!'
+)
+
+REGISTRATION_BULK_UPLOAD_PRODUCT_OWNER = Mail(
+    'registration_bulk_upload_product_owner',
+    subject='Registry Could Not Bulk Upload Registrations'
+)
+
+REGISTRATION_BULK_UPLOAD_SUCCESS_ALL = Mail(
+    'registration_bulk_upload_success_all',
+    subject='Registrations Successfully Bulk Uploaded to your Community\'s Registry'
+)
+
+REGISTRATION_BULK_UPLOAD_SUCCESS_PARTIAL = Mail(
+    'registration_bulk_upload_success_partial',
+    subject='Some Registrations Successfully Bulk Uploaded to your Community\'s Registry'
+)
+
+REGISTRATION_BULK_UPLOAD_FAILURE_ALL = Mail(
+    'registration_bulk_upload_failure_all',
+    subject='Registrations Were Not Bulk Uploaded to your Community\'s Registry'
+)
+
+REGISTRATION_BULK_UPLOAD_FAILURE_DUPLICATES = Mail(
+    'registration_bulk_upload_failure_duplicates',
+    subject='Registrations Were Not Bulk Uploaded to your Community\'s Registry'
+)
+
+REGISTRATION_BULK_UPLOAD_UNEXPECTED_FAILURE = Mail(
+    'registration_bulk_upload_unexpected_failure',
+    subject='Registrations Were Not Bulk Uploaded to your Community\'s Registry'
+)
+
+SCHEMA_RESPONSE_INITIATED = Mail(
+    'updates_initiated',
+    subject='Updates in in-progress for your ${resource_type} ${title}'
+)
+
+
+SCHEMA_RESPONSE_SUBMITTED = Mail(
+    'updates_pending_approval',
+    subject='Updates to your ${resource_type} ${title} are pending admin approval'
+)
+
+
+SCHEMA_RESPONSE_APPROVED = Mail(
+    'updates_approved',
+    subject='Updates to your ${resource_type} ${title} have been approved'
+)
+
+
+SCHEMA_RESPONSE_REJECTED = Mail(
+    'updates_rejected',
+    subject='Changes requested for the proposed updates to your ${resource_type} ${title}'
 )

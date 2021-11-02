@@ -129,7 +129,7 @@
                                         <p>
                                             ${_("You may need to reauthorize your GitHub access token.")}
                                             ${_('Follow the steps in the <a %(osfHelp)s>help guide</a> to resolve the issue.') % \
-                                            dict(osfHelp='class="alert-link" href="http://help.osf.io/a/850865-reauthorize-github" target="_black"') | n} <br>
+                                            dict(osfHelp='class="alert-link" href="http://help.osf.io/a/360054256674-reauthorize-github" target="_black"') | n} <br>
                                         </p>
                                         <p>
                                             ${_('Please contact <a %(mailtoRdmSupport)s>rdm_support@nii.ac.jp</a> if you have questions.') % dict(mailtoRdmSupport='class="alert-link" href="mailto:rdm_support@nii.ac.jp"') | n}

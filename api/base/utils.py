@@ -81,7 +81,7 @@ def absolute_reverse(view_name, query_kwargs=None, args=None, kwargs=None):
     return url
 
 
-def get_object_or_error(model_or_qs, query_or_pk=None, request=None, display_name=None):
+def get_object_or_error(model_or_qs, query_or_pk=None, request=None, display_name=None, check_deleted=True):
     if not request:
         # for backwards compat with existing get_object_or_error usages
         raise TypeError('request is a required argument')
@@ -136,7 +136,7 @@ def get_object_or_error(model_or_qs, query_or_pk=None, request=None, display_nam
     # disabled.
     if model_cls is OSFUser and obj.is_disabled:
         raise UserGone(user=obj)
-    elif model_cls is not OSFUser and not getattr(obj, 'is_active', True) or getattr(obj, 'is_deleted', False) or getattr(obj, 'deleted', False):
+    if check_deleted and (model_cls is not OSFUser and not getattr(obj, 'is_active', True) or getattr(obj, 'is_deleted', False) or getattr(obj, 'deleted', False)):
         if display_name is None:
             raise Gone
         else:
@@ -155,12 +155,12 @@ def default_node_permission_queryset(user, model_cls):
     assert model_cls in {Node, Registration}
     return model_cls.objects.get_nodes_for_user(user, include_public=True)
 
-def default_node_list_permission_queryset(user, model_cls):
+def default_node_list_permission_queryset(user, model_cls, **annotations):
     # **DO NOT** change the order of the querysets below.
     # If get_roots() is called on default_node_list_qs & default_node_permission_qs,
     # Django's alaising will break and the resulting QS will be empty and you will be sad.
     qs = default_node_permission_queryset(user, model_cls) & default_node_list_queryset(model_cls)
-    return qs.annotate(region=F('addons_osfstorage_node_settings__region___id'))
+    return qs.annotate(region=F('addons_osfstorage_node_settings__region___id'), **annotations)
 
 def extend_querystring_params(url, params):
     scheme, netloc, path, query, _ = urlsplit(url)
@@ -190,6 +190,20 @@ def has_admin_scope(request):
         return False
 
     return set(ComposedScopes.ADMIN_LEVEL).issubset(normalize_scopes(token.attributes['accessTokenScope']))
+
+
+def has_pigeon_scope(request):
+    """ Helper function to determine if a request token has OSF pigeon scope
+    """
+    token = request.auth
+    if token is None or not isinstance(token, CasResponse):
+        return False
+
+    if token.attributes['accessToken'] == website_settings.PIGEON_CALLBACK_BEARER_TOKEN:
+        return True
+    else:
+        return False
+
 
 def is_deprecated(request_version, min_version=None, max_version=None):
     if not min_version and not max_version:

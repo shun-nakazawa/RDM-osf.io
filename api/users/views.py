@@ -32,6 +32,7 @@ from api.nodes.serializers import DraftRegistrationLegacySerializer
 from api.nodes.utils import NodeOptimizationMixin
 from api.osf_groups.serializers import GroupSerializer
 from api.preprints.serializers import PreprintSerializer
+from api.registrations import annotations as registration_annotations
 from api.registrations.serializers import RegistrationSerializer
 
 from api.users.permissions import (
@@ -162,9 +163,7 @@ class UserList(JSONAPIBaseView, generics.ListAPIView, ListFilterMixin):
     view_name = 'user-list'
 
     def get_default_queryset(self):
-        if self.request.version >= '2.3':
-            return OSFUser.objects.filter(is_registered=True, date_disabled__isnull=True, merged_by__isnull=True)
-        return OSFUser.objects.filter(is_registered=True, date_disabled__isnull=True)
+        return OSFUser.objects.filter(is_registered=True, date_disabled__isnull=True, merged_by__isnull=True)
 
     # overrides ListCreateAPIView
     def get_queryset(self):
@@ -478,7 +477,11 @@ class UserRegistrations(JSONAPIBaseView, generics.ListAPIView, UserMixin, NodesF
     def get_default_queryset(self):
         user = self.get_user()
         current_user = self.request.user
-        qs = default_node_list_permission_queryset(user=current_user, model_cls=Registration)
+        qs = default_node_list_permission_queryset(
+            user=current_user,
+            model_cls=Registration,
+            revision_state=registration_annotations.REVISION_STATE,
+        )
         # OSF group members not copied to registration.  Only registration contributors need to be checked here.
         return qs.filter(contributor__user__id=user.id)
 

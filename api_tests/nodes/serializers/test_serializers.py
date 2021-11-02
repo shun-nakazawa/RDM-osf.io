@@ -223,6 +223,7 @@ class TestNodeRegistrationSerializer:
             'registration_schema',
             'region',
             'provider',
+            'storage',
             'groups',
             'creator',
         ]

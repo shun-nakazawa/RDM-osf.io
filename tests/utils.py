@@ -160,7 +160,7 @@ def mock_archive(project, schema=None, auth=None, draft_registration=None, paren
     """
     schema = schema or get_default_metaschema()
     auth = auth or Auth(project.creator)
-    draft_registration = draft_registration or DraftRegistrationFactory(branched_from=project)
+    draft_registration = draft_registration or DraftRegistrationFactory(branched_from=project, registration_schema=schema)
 
     with mock.patch('framework.celery_tasks.handlers.enqueue_task'):
         registration = project.register_node(
@@ -192,11 +192,7 @@ def mock_archive(project, schema=None, auth=None, draft_registration=None, paren
 
     if autoapprove:
         sanction = registration.root.sanction
-        sanction.state = Sanction.APPROVED
-        # save or _on_complete no worky
-        sanction.save()
-        sanction._on_complete(project.creator)
-        sanction.save()
+        sanction.accept()
 
     if retraction:
         justification = justification or 'Because reasons'
