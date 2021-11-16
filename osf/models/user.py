@@ -45,6 +45,7 @@ from osf.models.contributor import Contributor, RecentlyAddedContributor
 from osf.models.institution import Institution
 from osf.models.mixins import AddonModelMixin
 from osf.models.nodelog import NodeLog
+from osf.models.preprintlog import PreprintLog
 from osf.models.spam import SpamMixin
 from osf.models.session import Session
 from osf.models.tag import Tag
@@ -176,7 +177,7 @@ class OSFUser(DirtyFieldsMixin, GuidMixin, BaseModel, AbstractBaseUser, Permissi
 
     # Overrides DirtyFieldsMixin, Foreign Keys checked by '<attribute_name>_id' rather than typical name.
     FIELDS_TO_CHECK = SEARCH_UPDATE_FIELDS.copy()
-    FIELDS_TO_CHECK.update({'password', 'last_login', 'merged_by_id'})
+    FIELDS_TO_CHECK.update({'password', 'last_login', 'merged_by_id', 'username'})
 
     # TODO: Add SEARCH_UPDATE_NODE_FIELDS, for fields that should trigger a
     #   search update for all nodes to which the user is a contributor.
@@ -1090,6 +1091,8 @@ class OSFUser(DirtyFieldsMixin, GuidMixin, BaseModel, AbstractBaseUser, Permissi
 
     # Overrides BaseModel
     def save(self, *args, **kwargs):
+        from website import mailchimp_utils
+
         self.update_is_active()
         self.username = self.username.lower().strip() if self.username else None
         dirty_fields = set(self.get_dirty_fields(check_relationship=True))
@@ -1104,6 +1107,10 @@ class OSFUser(DirtyFieldsMixin, GuidMixin, BaseModel, AbstractBaseUser, Permissi
             if quickfiles:
                 quickfiles.title = get_quickfiles_project_title(self)
                 quickfiles.save()
+        if 'username' in dirty_fields:
+            for list_name, subscription in self.mailchimp_mailing_lists.items():
+                if subscription:
+                    mailchimp_utils.subscribe_mailchimp(list_name, self._id)
         return ret
 
     # Legacy methods
@@ -1140,7 +1147,6 @@ class OSFUser(DirtyFieldsMixin, GuidMixin, BaseModel, AbstractBaseUser, Permissi
             mails.send_mail(
                 to_addr=self.username,
                 mail=mails.PASSWORD_RESET,
-                mimetype='html',
                 user=self,
                 can_change_preferences=False,
                 osf_contact_email=website_settings.OSF_CONTACT_EMAIL
@@ -1493,12 +1499,16 @@ class OSFUser(DirtyFieldsMixin, GuidMixin, BaseModel, AbstractBaseUser, Permissi
     def confirm_spam(self, save=True):
         super().confirm_spam(save=save)
         for node in self.nodes.filter(is_public=True, is_deleted=False).exclude(type='osf.quickfilesnode'):
-            node.confirm_spam()
+            node.confirm_spam(train_akismet=False)
+        for preprint in self.preprints.filter(is_public=True, deleted__isnull=True):
+            preprint.confirm_spam(train_akismet=False)
 
     def confirm_ham(self, save=False):
         super().confirm_ham(save=save)
         for node in self.nodes.filter(logs__action=NodeLog.CONFIRM_SPAM).exclude(type='osf.quickfilesnode'):
-            node.confirm_ham(save=save)
+            node.confirm_ham(save=save, train_akismet=False)
+        for preprint in self.preprints.filter(logs__action=PreprintLog.CONFIRM_SPAM):
+            preprint.confirm_ham(save=save, train_akismet=False)
 
     def update_search(self):
         from website.search.search import update_user

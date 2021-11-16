@@ -124,7 +124,7 @@ INSTALLED_APPS = (
     'addons.github',
     'addons.googledrive',
     'addons.mendeley',
-    'addons.owncloud',
+    #'addons.owncloud',
     'addons.s3',
     'addons.zotero',
     'addons.iqbrims',

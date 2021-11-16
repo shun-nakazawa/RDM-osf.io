@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 from __future__ import division
@@ -703,7 +702,6 @@ def update_user_async(self, user_id, index=None):
         self.retry(exc)
 
 def serialize_node(node, category):
-    elastic_document = {}
     parent_id = node.parent_id
 
     normalized_title = unicode_normalize(node.title)
@@ -790,8 +788,6 @@ def comments_to_doc(guid_id):
     return comments
 
 def serialize_preprint(preprint, category):
-    elastic_document = {}
-
     normalized_title = unicode_normalize(preprint.title)
     tags = list(preprint.tags.filter(system=False).values_list('name', flat=True))
     latest_log = preprint.logs.order_by('created').last()
@@ -898,8 +894,6 @@ def serialize_wiki(wiki_page, category):
     return elastic_document
 
 def serialize_group(group, category):
-    elastic_document = {}
-
     normalized_title = unicode_normalize(group.name)
     elastic_document = {
         'id': group._id,
@@ -1158,6 +1152,10 @@ def serialize_cgm(cgm):
     if hasattr(obj, '_contributors'):
         contributors = obj._contributors.filter(contributor__visible=True).order_by('contributor___order').values('fullname', 'guids___id', 'is_active')
 
+    tags = []
+    if hasattr(obj, 'tags'):
+        tags = list(obj.tags.filter(system=False).values_list('name', flat=True))
+
     return {
         'id': cgm._id,
         'abstract': getattr(obj, 'description', ''),
@@ -1169,6 +1167,8 @@ def serialize_cgm(cgm):
         'volume': cgm.volume,
         'issue': cgm.issue,
         'programArea': cgm.program_area,
+        'schoolType': cgm.school_type,
+        'studyDesign': cgm.study_design,
         'subjects': list(cgm.subjects.values_list('text', flat=True)),
         'title': getattr(obj, 'title', ''),
         'url': getattr(obj, 'url', ''),
@@ -1421,7 +1421,7 @@ def update_file(file_, index=None, delete=False):
 def update_institution(institution, index=None):
     index = es_index(index)
     id_ = institution._id
-    if institution.is_deleted:
+    if institution.deleted or institution.deactivated:
         client().delete(index=index, doc_type='institution', id=id_, refresh=True, ignore=[404])
     else:
         institution_doc = {
@@ -1441,35 +1441,25 @@ def update_institution(institution, index=None):
 @celery_app.task(bind=True, max_retries=5, default_retry_delay=60)
 def update_cgm_async(self, cgm_id, collection_id=None, op='update', index=None):
     CollectionSubmission = apps.get_model('osf.CollectionSubmission')
+    qs = CollectionSubmission.objects.filter(
+        guid___id=cgm_id,
+        collection__provider__isnull=False,
+        collection__deleted__isnull=True,
+        collection__is_bookmark_collection=False)
     if collection_id:
+        qs = qs.filter(collection_id=collection_id)
+
+    for cgm in qs:
+        if op != 'delete' and \
+            ((hasattr(cgm.guid.referent, 'is_public') and not cgm.guid.referent.is_public) or
+                (hasattr(cgm.guid.referent, 'is_deleted') and cgm.guid.referent.is_deleted)):
+            logger.exception('May only delete search index of private or deleted object')
+            return
+
         try:
-            cgm = CollectionSubmission.objects.get(
-                guid___id=cgm_id,
-                collection_id=collection_id,
-                collection__provider__isnull=False,
-                collection__deleted__isnull=True,
-                collection__is_bookmark_collection=False)
-
-        except CollectionSubmission.DoesNotExist:
-            logger.exception('Could not find object <_id {}> in a collection <_id {}>'.format(cgm_id, collection_id))
-        else:
-            if cgm and hasattr(cgm.guid.referent, 'is_public') and cgm.guid.referent.is_public:
-                try:
-                    update_cgm(cgm, op=op, index=index)
-                except Exception as exc:
-                    self.retry(exc=exc)
-    else:
-        cgms = CollectionSubmission.objects.filter(
-            guid___id=cgm_id,
-            collection__provider__isnull=False,
-            collection__deleted__isnull=True,
-            collection__is_bookmark_collection=False)
-
-        for cgm in cgms:
-            try:
-                update_cgm(cgm, op=op, index=index)
-            except Exception as exc:
-                self.retry(exc=exc)
+            update_cgm(cgm, op=op, index=index)
+        except Exception as exc:
+            self.retry(exc=exc)
 
 @requires_search
 def update_cgm(cgm, op='update', index=None):
@@ -1609,7 +1599,9 @@ def create_index(index=None):
                     'programArea': NOT_ANALYZED_PROPERTY,
                     'provider': NOT_ANALYZED_PROPERTY,
                     'title': analyzer,
-                    'abstract': analyzer
+                    'abstract': analyzer,
+                    'schoolType': NOT_ANALYZED_PROPERTY,
+                    'studyDesign': NOT_ANALYZED_PROPERTY,
                 }
             }
         else:

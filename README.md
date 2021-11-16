@@ -18,6 +18,10 @@ The code for [https://rcos.nii.ac.jp](https://rcos.nii.ac.jp).
 
 The code for [https://osf.io](https://osf.io).
 
+- `master` ![Build Status](https://github.com/CenterForOpenScience/osf.io/workflows/osf.io/badge.svg?branch=master)
+- `develop` ![Build Status](https://github.com/CenterForOpenScience/osf.io/workflows/osf.io/badge.svg?branch=develop)
+- Versioning Scheme:  [![CalVer Scheme](https://img.shields.io/badge/calver-YY.MINOR.MICRO-22bfda.svg)](http://calver.org)
+- Issues: https://github.com/CenterForOpenScience/osf.io/issues?state=open
 - COS Development Docs: http://cosdev.readthedocs.org/
 
 ## Running the GakuNin RDM For Development

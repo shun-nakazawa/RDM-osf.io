@@ -388,6 +388,7 @@ API_TESTS1 = [
     'api_tests/providers',
     'api_tests/preprints',
     'api_tests/registrations',
+    'api_tests/registries_moderation',
     'api_tests/users',
 ]
 API_TESTS2 = [
@@ -398,6 +399,7 @@ API_TESTS2 = [
     'api_tests/nodes',
     'api_tests/osf_groups',
     'api_tests/requests',
+    'api_tests/schema_responses',
     'api_tests/subscriptions',
     'api_tests/waffle',
     'api_tests/wb',
@@ -423,6 +425,7 @@ API_TESTS3 = [
     'api_tests/test',
     'api_tests/tokens',
     'api_tests/view_only_links',
+    'api_tests/share',
     'api_tests/wikis',
 ]
 ADDON_TESTS = [
@@ -525,7 +528,7 @@ def test_travis_addons(ctx, numprocesses=None, coverage=False, testmon=False):
     """
     Run half of the tests to help travis go faster.
     """
-    travis_setup(ctx)
+    #travis_setup(ctx)
     syntax(ctx)
     test_addons(ctx, numprocesses=numprocesses, coverage=coverage, testmon=testmon)
 
@@ -534,7 +537,7 @@ def test_travis_website(ctx, numprocesses=None, coverage=False, testmon=False):
     """
     Run other half of the tests to help travis go faster.
     """
-    travis_setup(ctx)
+    #travis_setup(ctx)
     test_website(ctx, numprocesses=numprocesses, coverage=coverage, testmon=testmon)
 
 
@@ -542,19 +545,19 @@ def test_travis_website(ctx, numprocesses=None, coverage=False, testmon=False):
 def test_travis_api1_and_js(ctx, numprocesses=None, coverage=False, testmon=False):
     # TODO: Uncomment when https://github.com/travis-ci/travis-ci/issues/8836 is resolved
     # karma(ctx)
-    travis_setup(ctx)
+    #travis_setup(ctx)
     test_api1(ctx, numprocesses=numprocesses, coverage=coverage, testmon=testmon)
 
 
 @task
 def test_travis_api2(ctx, numprocesses=None, coverage=False, testmon=False):
-    travis_setup(ctx)
+    #travis_setup(ctx)
     test_api2(ctx, numprocesses=numprocesses, coverage=coverage, testmon=testmon)
 
 
 @task
 def test_travis_api3_and_osf(ctx, numprocesses=None, coverage=False, testmon=False):
-    travis_setup(ctx)
+    #travis_setup(ctx)
     test_api3(ctx, numprocesses=numprocesses, coverage=coverage, testmon=testmon)
 
 @task

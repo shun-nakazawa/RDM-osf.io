@@ -199,7 +199,7 @@ class TestNodeSerializerAndRegistrationSerializerDifferences(ApiTestCase):
             'quota_threshold',
             'wiki_enabled']
         # fields that do not appear on registrations
-        non_registration_fields = ['registrations', 'draft_registrations', 'templated_by_count', 'settings', 'children', 'groups', 'addons']
+        non_registration_fields = ['registrations', 'draft_registrations', 'templated_by_count', 'settings', 'storage', 'children', 'groups', 'addons']
 
         for field in NodeSerializer._declared_fields:
             assert_in(field, RegistrationSerializer._declared_fields)
@@ -208,6 +208,7 @@ class TestNodeSerializerAndRegistrationSerializerDifferences(ApiTestCase):
             if field not in visible_on_withdrawals and field not in non_registration_fields:
                 assert_true(
                     isinstance(reg_field, base_serializers.HideIfWithdrawal) or
+                    isinstance(reg_field, base_serializers.HideIfWithdrawalOrWikiDisabled) or
                     isinstance(reg_field, base_serializers.ShowIfVersion) or
                     isinstance(reg_field, base_serializers.ShowIfAdminScopeOrAnonymous)
                 )

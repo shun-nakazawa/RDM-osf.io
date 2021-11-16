@@ -10,7 +10,8 @@ import logging
 from . import defaults
 import os
 
-DB_PORT = 54321
+DB_PORT = 5432
+OSF_DB_PASSWORD = 'postgres'
 
 DEV_MODE = True
 DEBUG_MODE = True  # Sets app to debug mode, turns off template caching, etc.
@@ -106,3 +107,7 @@ DOI_FORMAT = '{prefix}/FK2osf.io/{guid}'
 
 ADMIN_URL='http://localhost:8001/'
 ADMIN_INTERNAL_DOCKER_URL='http://localhost:8001/'
+
+SHARE_ENABLED = False
+DATACITE_ENABLED = False
+IA_ARCHIVE_ENABLED = False

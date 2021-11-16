@@ -37,7 +37,7 @@ from osf.exceptions import NodeStateError
 from osf.models import (
     Comment, DraftRegistration, ExternalAccount, Institution,
     RegistrationSchema, AbstractNode, PrivateLink, Preprint,
-    RegistrationProvider, OSFGroup, NodeLicense,
+    RegistrationProvider, OSFGroup, NodeLicense, DraftNode,
 )
 from website.project import new_private_link
 from website.project.model import NodeUpdateError
@@ -130,8 +130,7 @@ def get_or_add_license_to_serializer_context(serializer, node):
         if license_context:
             license_context[node._id] = license
         else:
-            serializer.context['licenses'] = {}
-            serializer.context['licenses'][node._id] = license
+            serializer.context['licenses'] = {node._id: license}
         return license
 
 
@@ -242,6 +241,7 @@ class NodeSerializer(TaxonomizableSerializerMixin, JSONAPISerializer):
         'contributors',
         'preprint',
         'subjects',
+        'reviews_state',
     ])
 
     # If you add a field to this serializer, be sure to add to this
@@ -249,6 +249,7 @@ class NodeSerializer(TaxonomizableSerializerMixin, JSONAPISerializer):
     non_anonymized_fields = [
         'access_requests_enabled',
         'affiliated_institutions',
+        'affiliate_user_institutions',
         'analytics_key',
         'category',
         'children',
@@ -282,6 +283,7 @@ class NodeSerializer(TaxonomizableSerializerMixin, JSONAPISerializer):
         'registration',
         'root',
         'settings',
+        'storage',
         'subjects',
         'tags',
         'template_from',
@@ -537,6 +539,11 @@ class NodeSerializer(TaxonomizableSerializerMixin, JSONAPISerializer):
         related_view='nodes:node-preprints',
         related_view_kwargs={'node_id': '<_id>'},
     ))
+
+    storage = RelationshipField(
+        related_view='nodes:node-storage',
+        related_view_kwargs={'node_id': '<_id>'},
+    )
 
     quota_rate = ser.SerializerMethodField()
     quota_threshold = ser.SerializerMethodField()
@@ -1384,6 +1391,28 @@ class NodeLinksSerializer(JSONAPISerializer):
         pass
 
 
+class NodeStorageSerializer(JSONAPISerializer):
+    id = IDField(source='_id', required=True)
+    storage_limit_status = ser.CharField(source='storage_limit_status.name', read_only=True, allow_null=True)
+    storage_usage = ser.CharField(read_only=True, allow_null=True)
+
+    class Meta:
+        type_ = 'node-storage'
+
+    links = LinksField({
+        'self': 'get_absolute_url',
+    })
+
+    def get_absolute_url(self, obj):
+        return absolute_reverse(
+            'nodes:node-storage',
+            kwargs={
+                'node_id': obj._id,
+                'version': self.context['request'].parser_context['kwargs']['version'],
+            },
+        )
+
+
 class NodeStorageProviderSerializer(JSONAPISerializer):
     id = ser.SerializerMethodField(read_only=True)
     kind = ser.CharField(read_only=True)
@@ -1529,6 +1558,12 @@ class DraftRegistrationLegacySerializer(JSONAPISerializer):
         'html': 'get_absolute_url',
     })
 
+    affiliate_user_institutions = ser.BooleanField(
+        required=False,
+        default=True,
+        help_text='Specify whether user institution affiliations should be copied over to the draft registration.',
+    )
+
     def get_absolute_url(self, obj):
         return obj.absolute_url
 
@@ -1568,21 +1603,24 @@ class DraftRegistrationLegacySerializer(JSONAPISerializer):
         metadata = validated_data.pop('registration_metadata', None)
         registration_responses = validated_data.pop('registration_responses', None)
         schema = validated_data.pop('registration_schema')
-
-        provider = validated_data.pop('provider', None) or RegistrationProvider.load('osf')
-        # TODO: this
-        # if not provider.schemas_acceptable.filter(id=schema.id).exists():
-        #     raise exceptions.ValidationError('Invalid schema for provider.')
+        provider = validated_data.pop('provider', None)
+        affiliate_user_institutions = validated_data.pop('affiliate_user_institutions', True)
 
         self.enforce_metadata_or_registration_responses(metadata, registration_responses)
 
-        draft = DraftRegistration.create_from_node(node=node, user=initiator, schema=schema, provider=provider)
+        try:
+            draft = DraftRegistration.create_from_node(node=node, user=initiator, schema=schema, provider=provider)
+        except ValidationError as e:
+            raise exceptions.ValidationError(e.message)
 
         if metadata:
             self.update_metadata(draft, metadata)
 
         if registration_responses:
             self.update_registration_responses(draft, registration_responses)
+
+        if affiliate_user_institutions and draft.branched_from_type == DraftNode:
+            draft.affiliated_institutions.set(draft.creator.affiliated_institutions.all())
 
         return draft
 
