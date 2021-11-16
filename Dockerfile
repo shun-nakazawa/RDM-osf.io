@@ -8,12 +8,9 @@ RUN set -x \
     && adduser -h /var/www -u 82 -D -S -G www-data www-data
 
 RUN apk add --no-cache --virtual .run-deps \
-<<<<<<< HEAD
-=======
     gcc \
     g++ \
     python3-dev \
->>>>>>> 21.07.6
     libxslt-dev \
     su-exec \
     bash \
