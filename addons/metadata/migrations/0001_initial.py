@@ -15,6 +15,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ('osf', '0217_ensure_schemas'),
     ]
 
     operations = [

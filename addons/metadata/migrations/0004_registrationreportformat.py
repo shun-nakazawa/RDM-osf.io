@@ -11,7 +11,6 @@ import osf.models.base
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('osf', '0217_ensure_schemas'),
         ('addons_metadata', '0003_filemetadata_registered'),
     ]
 
