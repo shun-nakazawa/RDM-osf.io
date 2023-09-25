@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from django.db import migrations
+from django.db import migrations, models
 from osf.utils.migrations import UpdateRegistrationSchemasAndSchemaBlocks
 
 
@@ -18,10 +18,30 @@ def ensure_registration_reports(*args):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('osf', '0228_ensure_schema_and_reports'),
+        ('osf', '0232_auto_20230830_0425'),
     ]
 
     operations = [
+        migrations.AddField(
+            model_name='registrationschemablock',
+            name='required_if',
+            field=models.TextField(null=True),
+        ),
+        migrations.AddField(
+            model_name='registrationschemablock',
+            name='message_required_if',
+            field=models.TextField(null=True),
+        ),
+        migrations.AddField(
+            model_name='registrationschemablock',
+            name='enabled_if',
+            field=models.TextField(null=True),
+        ),
+        migrations.AddField(
+            model_name='registrationschemablock',
+            name='suggestion',
+            field=models.TextField(null=True),
+        ),
         UpdateRegistrationSchemasAndSchemaBlocks(),
         migrations.RunPython(ensure_registration_reports, ensure_registration_reports),
     ]
