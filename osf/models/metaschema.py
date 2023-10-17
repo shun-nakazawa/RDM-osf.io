@@ -193,6 +193,9 @@ class RegistrationSchemaBlock(ObjectIDMixin, BaseModel):
     pattern = models.CharField(max_length=255, null=True)
     space_normalization = models.BooleanField(default=False)
     conditional_required = models.TextField(null=True)
+    conditional_required_message = models.TextField(null=True)
+    conditional_enabled = models.TextField(null=True)
+    suggestion = models.TextField(null=True)
 
     @property
     def absolute_api_v2_url(self):

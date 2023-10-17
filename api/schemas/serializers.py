@@ -45,6 +45,9 @@ class RegistrationSchemaBlockSerializer(JSONAPISerializer):
     pattern = ser.CharField(read_only=True)
     space_normalization = ser.BooleanField(read_only=True)
     conditional_required = ser.CharField(read_only=True)
+    conditional_required_message = ser.CharField(read_only=True)
+    conditional_enabled = ser.CharField(read_only=True)
+    suggestion = ser.CharField(read_only=True)
     index = ser.IntegerField(read_only=True, source='_order')
 
     links = LinksField({

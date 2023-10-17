@@ -11,10 +11,6 @@ from . import views
 api_routes = {
     'rules': [
         Rule([
-            '/project/<pid>/{}/erad/candidates'.format(SHORT_NAME),
-            '/project/<pid>/node/<nid>/{}/erad/candidates'.format(SHORT_NAME),
-        ], 'get', views.metadata_get_erad_candidates, json_renderer),
-        Rule([
             '/project/<pid>/{}/project'.format(SHORT_NAME),
             '/project/<pid>/node/<nid>/{}/project'.format(SHORT_NAME),
         ], 'get', views.metadata_get_project, json_renderer),

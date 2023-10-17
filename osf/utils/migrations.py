@@ -217,7 +217,8 @@ def remove_schemas(*args):
 
 def create_schema_block(state, schema_id, block_type, display_text='', required=False, help_text='',
         registration_response_key=None, schema_block_group_key='', example_text='',
-        default=False, pattern=None, space_normalization=False, conditional_required=None):
+        default=False, pattern=None, space_normalization=False, conditional_required=None,
+        conditional_required_message=None, conditional_enabled=None, suggestion=None):
     """
     For mapping schemas to schema blocks: creates a given block from the specified parameters
     """
@@ -256,6 +257,9 @@ def create_schema_block(state, schema_id, block_type, display_text='', required=
         'pattern': pattern,
         'space_normalization': space_normalization,
         'conditional_required': conditional_required,
+        'conditional_required_message': conditional_required_message,
+        'conditional_enabled': conditional_enabled,
+        'suggestion': suggestion,
     }
 
     try:
@@ -424,6 +428,9 @@ def create_schema_blocks_for_question(state, rs, question, sub=False):
             pattern=question.get('pattern', None),
             space_normalization=question.get('space_normalization', False),
             conditional_required=question.get('conditional_required', None),
+            conditional_required_message=question.get('conditional_required_message', None),
+            conditional_enabled=question.get('conditional_enabled', None),
+            suggestion=question.get('suggestion', None),
         )
 
         # If there are multiple choice answers, create blocks for these as well.
