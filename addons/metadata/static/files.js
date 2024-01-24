@@ -193,7 +193,7 @@ function MetadataButtons() {
         filepath: filepath,
         wbcache: context.wbcache,
         fileitem: fileitem
-      },
+      }
     );
     self.lastFields = self.lastQuestionPage.fields;
     container.empty();
