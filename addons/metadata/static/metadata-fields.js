@@ -867,6 +867,9 @@ function validateRequired(question, value, questionFields, multiple) {
   if (multiple || value) {
     return;
   }
+  if (question.enabled_if && !evaluateCond(question.enabled_if, questionFields)) {
+    return;
+  }
   const cond = question.required_if;
   const condErrorMessage = question.message_required_if;
   if (cond) {
