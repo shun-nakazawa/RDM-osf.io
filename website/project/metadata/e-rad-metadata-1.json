@@ -211,6 +211,172 @@
               }
           ],
           "required": true
+        },
+        {
+          "qid": "test-object-type1",
+          "nav": "objectのテスト1",
+          "title": "objectのテスト1|object test1",
+          "type": "object",
+          "required": true,
+          "properties": [
+            {
+              "id": "last",
+              "title": "姓|Last Name",
+              "type": "string",
+              "format": "text",
+              "required": false,
+              "space_normalization": true
+            },
+            {
+              "id": "middle",
+              "title": "ミドルネーム|Middle Name",
+              "type": "string",
+              "format": "text",
+              "required": false,
+              "space_normalization": true
+            },
+            {
+              "id": "first",
+              "title": "名|First Name",
+              "type": "string",
+              "format": "text",
+              "required": false,
+              "space_normalization": true
+            }
+          ]
+        },
+        {
+          "qid": "test-object-type2",
+          "nav": "objectのテスト2",
+          "title": "objectのテスト2|object test2",
+          "type": "object",
+          "required": true,
+          "properties": [
+            {
+              "id": "number",
+              "title": "ID",
+              "type": "string",
+              "format": "text",
+              "required": false,
+              "space_normalization": true
+            },
+            {
+              "id": "test-object-type2-sub",
+              "nav": "objectのテスト2-sub",
+              "title": "objectのテスト2-sub|object test1",
+              "type": "object",
+              "required": true,
+              "properties": [
+                {
+                  "id": "last",
+                  "title": "姓|Last Name",
+                  "type": "string",
+                  "format": "text",
+                  "required": false,
+                  "space_normalization": true
+                },
+                {
+                  "id": "middle",
+                  "title": "ミドルネーム|Middle Name",
+                  "type": "string",
+                  "format": "text",
+                  "required": false,
+                  "space_normalization": true
+                },
+                {
+                  "id": "first",
+                  "title": "名|First Name",
+                  "type": "string",
+                  "format": "text",
+                  "required": false,
+                  "space_normalization": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "qid": "test-array-type1",
+          "nav": "arrayのテスト1",
+          "title": "arrayのテスト1|array test1",
+          "type": "array",
+          "required": true,
+          "properties": [
+            {
+              "id": "last",
+              "title": "姓|Last Name",
+              "type": "string",
+              "format": "text",
+              "required": false,
+              "space_normalization": true
+            },
+            {
+              "id": "middle",
+              "title": "ミドルネーム|Middle Name",
+              "type": "string",
+              "format": "text",
+              "required": false,
+              "space_normalization": true
+            },
+            {
+              "id": "first",
+              "title": "名|First Name",
+              "type": "string",
+              "format": "text",
+              "required": false,
+              "space_normalization": true
+            }
+          ]
+        },
+        {
+          "qid": "test-array-type2",
+          "nav": "arrayのテスト2",
+          "title": "arrayのテスト2|array test2",
+          "type": "array",
+          "required": true,
+          "properties": [
+            {
+              "id": "number",
+              "title": "ID",
+              "type": "string",
+              "format": "text",
+              "required": false,
+              "space_normalization": true
+            },
+            {
+              "id": "test-array-type2-sub",
+              "nav": "arrayのテスト2-sub",
+              "title": "arrayのテスト2-sub|array test1",
+              "type": "array",
+              "required": true,
+              "properties": [
+                {
+                  "id": "last",
+                  "title": "姓|Last Name",
+                  "type": "string",
+                  "format": "text",
+                  "required": false,
+                  "space_normalization": true
+                },
+                {
+                  "id": "middle",
+                  "title": "ミドルネーム|Middle Name",
+                  "type": "string",
+                  "format": "text",
+                  "required": false,
+                  "space_normalization": true
+                },
+                {
+                  "id": "first",
+                  "title": "名|First Name",
+                  "type": "string",
+                  "format": "text",
+                  "required": false,
+                  "space_normalization": true
+                }
+              ]
+            }
+          ]
         }
       ]
     },
