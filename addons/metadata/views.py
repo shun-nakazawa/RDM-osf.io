@@ -371,14 +371,50 @@ def metadata_file_metadata_suggestions(auth, filepath=None, **kwargs):
         for key in key_list
     ], [])
     return {
-        'data': {
-            'id': node._id,
-            'type': 'file-metadata-suggestion',
-            'attributes': {
-                'filepath': filepath,
-                'suggestions': suggestions
+        'data': [
+            {
+                'id': f'{node._id}_{idx}',
+                'type': 'file-metadata-suggestion-result',
+                'attributes': {
+                    'filepath': None,
+                    'suggestion': suggestion
+                }
             }
-        }
+            for idx, suggestion in enumerate(suggestions)
+        ]
+    }
+
+@must_be_valid_project
+@must_be_logged_in
+@must_have_permission('write')
+@must_have_addon(SHORT_NAME, 'node')
+def metadata_suggestions(auth, **kwargs):
+    # TODO: metadata_file_metadata_suggestions() と結合する。ほぼ同じなので。
+    key_list = request.args.getlist('key[]', None) or request.args.get('key', None)
+    if key_list is None:
+        raise HTTPError(http_status.HTTP_400_BAD_REQUEST)
+    if type(key_list) is str:
+        key_list = [key_list]
+    if any([not valid_suggestion_key(key) for key in key_list]):
+        raise HTTPError(http_status.HTTP_400_BAD_REQUEST)
+    keyword = request.args.get('keyword', '').lower()
+    node = kwargs['node'] or kwargs['project']
+    suggestions = sum([  # flatten
+        suggestion_metadata(key, keyword, None, node)
+        for key in key_list
+    ], [])
+    return {
+        'data': [
+            {
+                'id': f'{node._id}_{idx}',
+                'type': 'metadata-suggestion-result',
+                'attributes': {
+                    'filepath': None,
+                    'suggestion': suggestion
+                }
+            }
+            for idx, suggestion in enumerate(suggestions)
+        ]
     }
 
 @must_be_logged_in

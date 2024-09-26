@@ -234,6 +234,8 @@ msgid "One of this field or \"%s\" field must be filled."
 msgstr "このフィールドか「%s」フィールドのいずれかを入力する必要があります。"
 
 #: addons/metadata/static/metadata-fields.js:911
+#: addons/metadata/static/metadata-fields.js:59
+#: addons/metadata/static/metadata-fields.js:250
 msgid "This field can't be blank."
 msgstr "このフィールドは必須項目です。"
 

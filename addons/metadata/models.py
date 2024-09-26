@@ -35,6 +35,29 @@ logger = logging.getLogger(__name__)
 
 
 FIELD_GRDM_FILES = 'grdm-files'
+ERAD_HAIBUNKIKAN_SHORT_NAME_MAP = {
+    '303': 'AMED',
+    '501': 'MOD',
+    '1503': 'NRA',
+    '1502': 'ERCA',
+    '301': 'CAO',
+    '601': 'SOUMU',
+    '605': 'FDMA',
+    '615': 'NICT',
+    '1001': 'MEXT',
+    '1020': 'JST',
+    '1025': 'JSPS',
+    '1101': 'MHLW',
+    '1201': 'MAFF',
+    '1203': 'PRIMAFF',
+    '1205': 'NARO',
+    '1301': 'METI',
+    '1305': 'NEDO',
+    '1401': 'MLIT',
+    '1405': 'NILIM',
+    '1501': 'ENV',
+    '1106': 'BIBIOHN',
+}
 
 
 def get_draft_files(draft_metadata):
@@ -57,16 +80,18 @@ def schema_has_field(schema, name):
 class ERadRecordSet(BaseModel):
     code = models.CharField(max_length=64, primary_key=True)
 
-    def get_or_create_record(self, kenkyusha_no, kadai_id, nendo):
+    def get_or_create_record(self, kenkyusha_no, kadai_id, nendo, haibunkikan_cd):
         objs = ERadRecord.objects.filter(
             recordset=self, kenkyusha_no=kenkyusha_no, kadai_id=kadai_id,
             nendo=nendo,
         )
         if objs.exists():
             return objs.first()
+        haibunkikan_short_name = ERAD_HAIBUNKIKAN_SHORT_NAME_MAP.get(haibunkikan_cd, None)
         return ERadRecord.objects.create(
             recordset=self, kenkyusha_no=kenkyusha_no, kadai_id=kadai_id,
-            nendo=nendo,
+            nendo=nendo, haibunkikan_short_name=haibunkikan_short_name,
+            haibunkikan_cd=haibunkikan_cd,
         )
 
     @classmethod
@@ -90,6 +115,7 @@ class ERadRecord(BaseModel):
 
     haibunkikan_cd = models.TextField(blank=True, null=True)
     haibunkikan_mei = models.TextField(blank=True, null=True)
+    haibunkikan_short_name = models.TextField(blank=True, null=True)
 
     nendo = models.IntegerField(blank=True, null=True)
 

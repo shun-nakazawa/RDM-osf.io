@@ -201,6 +201,7 @@ class RegistrationSchemaBlock(ObjectIDMixin, BaseModel):
     message_required_if = models.TextField(null=True)
     enabled_if = models.TextField(null=True)
     suggestion = models.TextField(null=True)
+    allow_additional_option = models.BooleanField(default=False)
 
     @property
     def absolute_api_v2_url(self):

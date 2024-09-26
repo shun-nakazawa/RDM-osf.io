@@ -1,4 +1,5 @@
 from rest_framework import serializers as ser
+import json
 
 from api.base.serializers import (
     JSONAPISerializer,
@@ -30,6 +31,18 @@ class SchemaSerializer(JSONAPISerializer):
         type_ = 'schemas'
 
 
+class JsonToDictField(ser.Field):
+    def to_internal_value(self, data):
+        return data
+
+    def to_representation(self, value, default={}):
+        if isinstance(value, str) and len(value) > 0:
+            return json.loads(value)
+        elif isinstance(value, dict) or isinstance(value, list):
+            return value
+        return default
+
+
 class RegistrationSchemaBlockSerializer(JSONAPISerializer):
 
     id = IDField(source='_id', read_only=True)
@@ -44,10 +57,11 @@ class RegistrationSchemaBlockSerializer(JSONAPISerializer):
     default = ser.BooleanField(read_only=True)
     pattern = ser.CharField(read_only=True)
     space_normalization = ser.BooleanField(read_only=True)
-    required_if = ser.CharField(read_only=True)
+    required_if = JsonToDictField(read_only=True, default={})
     message_required_if = ser.CharField(read_only=True)
     enabled_if = ser.CharField(read_only=True)
-    suggestion = ser.CharField(read_only=True)
+    suggestion = JsonToDictField(read_only=True, default=[])
+    allow_additional_option = ser.BooleanField(read_only=True)
     index = ser.IntegerField(read_only=True, source='_order')
 
     links = LinksField({

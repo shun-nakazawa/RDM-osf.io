@@ -48,7 +48,7 @@ FORMAT_TYPE_TO_TYPE_MAP = {
     ('e-rad-award-title-en', 'string'): 'e-rad-award-title-en-input',
     ('e-rad-award-field', 'choose'): 'e-rad-award-field-input',
     ('e-rad-researcher-number', 'string'): 'e-rad-researcher-number-input',
-    ('e-rad-researcher-name-ja', 'string'): 'e-rad-researcher-name-ja-input',
+    ('e-rad-researcher-name-ja', 'string'): 'short-text-input',
     ('e-rad-researcher-name-en', 'string'): 'e-rad-researcher-name-en-input',
     ('e-rad-bunnya', 'string'): 'e-rad-bunnya-input',
     ('file-metadata', 'string'): 'file-metadata-input',
@@ -219,7 +219,7 @@ def remove_schemas(*args):
 def create_schema_block(state, schema_id, block_type, display_text='', required=False, help_text='',
         registration_response_key=None, schema_block_group_key='', example_text='',
         default=False, pattern=None, space_normalization=False, required_if=None,
-        message_required_if=None, enabled_if=None, suggestion=None):
+        message_required_if=None, enabled_if=None, suggestion=None, allow_additional_option=False):
     """
     For mapping schemas to schema blocks: creates a given block from the specified parameters
     """
@@ -253,6 +253,12 @@ def create_schema_block(state, schema_id, block_type, display_text='', required=
             }
         ),
     }
+
+    if isinstance(required_if, dict):
+        required_if = json.dumps(required_if)
+    if isinstance(suggestion, list):
+        suggestion = json.dumps(suggestion)
+
     additional = {
         'default': default,
         'pattern': pattern,
@@ -261,6 +267,7 @@ def create_schema_block(state, schema_id, block_type, display_text='', required=
         'message_required_if': message_required_if,
         'enabled_if': enabled_if,
         'suggestion': suggestion,
+        'allow_additional_option': allow_additional_option,
     }
 
     try:
@@ -395,6 +402,7 @@ def create_schema_blocks_for_question(state, rs, question, sub=False):
                     message_required_if=question.get('message_required_if', None),
                     enabled_if=question.get('enabled_if', None),
                     suggestion=question.get('suggestion', None),
+                    allow_additional_option=question.get('allow_additional_option', False),
                 )
             else:
                 create_schema_block(
@@ -411,6 +419,7 @@ def create_schema_blocks_for_question(state, rs, question, sub=False):
                     message_required_if=question.get('message_required_if', None),
                     enabled_if=question.get('enabled_if', None),
                     suggestion=question.get('suggestion', None),
+                    allow_additional_option=question.get('allow_additional_option', False),
                 )
         else:
             # the first subquestion has no text, so the "section" heading is better interpreted as a question label
@@ -465,6 +474,7 @@ def create_schema_blocks_for_question(state, rs, question, sub=False):
             message_required_if=question.get('message_required_if', None),
             enabled_if=question.get('enabled_if', None),
             suggestion=question.get('suggestion', None),
+            allow_additional_option=question.get('allow_additional_option', False),
         )
 
         # If there are multiple choice answers, create blocks for these as well.
