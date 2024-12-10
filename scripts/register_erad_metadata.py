@@ -38,7 +38,8 @@ def do_populate(file):
             kenkyusha_no = row['KENKYUSHA_NO']
             kadai_id = row['KADAI_ID']
             nendo = int(row['NENDO'])
-            record = recordset.get_or_create_record(kenkyusha_no, kadai_id, nendo)
+            haibunkikan_cd = row['HAIBUNKIKAN_CD']
+            record = recordset.get_or_create_record(kenkyusha_no, kadai_id, nendo, haibunkikan_cd)
             for key in ERAD_COLUMNS:
                 setattr(record, key.lower(), row[key])
             record.save()

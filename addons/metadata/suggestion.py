@@ -19,6 +19,9 @@ ERAD_COLUMNS = [
     'JIGYO_CD', 'JIGYO_MEI', 'KADAI_ID', 'KADAI_MEI', 'BUNYA_CD', 'BUNYA_MEI',
     'JAPAN_GRANT_NUMBER', 'PROGRAM_NAME_JA', 'PROGRAM_NAME_EN', 'FUNDING_STREAM_CODE',
 ]
+ADDITIONAL_ERAD_COLUMNS = [
+    'HAIBUNKIKAN_SHORT_NAME',
+]
 
 ROR_URL = 'https://api.ror.org/organizations'
 
@@ -144,6 +147,12 @@ def suggestion_erad(key, keyword, node):
             'middle': ''.join(en_parts[1:-1]),
             'first': en_parts[-1] if len(en_parts) > 0 else '',
         }
+        kadai_parts = candidate.get('kadai_mei', '').split('|')
+        kadai_ja = kadai_parts[0]
+        kadai_en = kadai_parts[1] if len(kadai_parts) > 1 else ''
+        haibunkikan_parts = candidate.get('haibunkikan_mei').split('|')
+        haibunkikan_ja = haibunkikan_parts[0]
+        haibunkikan_en = haibunkikan_parts[1] if len(haibunkikan_parts) > 1 else ''
         res.append({
             'key': key,
             'value': {
@@ -154,6 +163,10 @@ def suggestion_erad(key, keyword, node):
                 'kenkyusha_shimei_en_msfullname': _to_msfullname(kenkyusha_shimei_en, 'en'),
                 'kenkyukikan_mei_ja': kikan_ja,
                 'kenkyukikan_mei_en': kikan_en,
+                'kadai_mei_ja': kadai_ja,
+                'kadai_mei_en': kadai_en,
+                'haibunkikan_ja': haibunkikan_ja,
+                'haibunkikan_en': haibunkikan_en,
             },
         })
     return res
@@ -171,7 +184,7 @@ def _erad_candidates(**pred):
     return [
         dict([
             (k.lower(), getattr(record, k.lower()))
-            for k in ERAD_COLUMNS
+            for k in [*ERAD_COLUMNS, *ADDITIONAL_ERAD_COLUMNS]
         ])
         for record in ERadRecord.objects.filter(**pred)
     ]

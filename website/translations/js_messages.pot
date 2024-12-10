@@ -231,6 +231,8 @@ msgid "One of this field or \"%s\" field must be filled."
 msgstr ""
 
 #: addons/metadata/static/metadata-fields.js:911
+#: addons/metadata/static/metadata-fields.js:59
+#: addons/metadata/static/metadata-fields.js:250
 msgid "This field can't be blank."
 msgstr ""
 

@@ -927,21 +927,7 @@ function validateRequired(question, value, questionFields, multiple) {
   const cond = question.required_if;
   const condErrorMessage = question.message_required_if;
   if (cond) {
-    if (typeof(cond) === 'string') {
-      const otherField = questionFields.find(function(questionField) {
-        return questionField.question.qid === cond || questionField.question.id === cond;
-      });
-      if (!otherField) {
-        throw new Error('Schema error: invalid required_if: ' + cond);
-      }
-      if (!otherField.getValue()) {
-        throw new Error(
-          condErrorMessage ||
-          sprintf(_('One of this field or "%s" field must be filled.'),
-            getLocalizedText(otherField.question.title))
-        );
-      }
-    } else if (typeof(cond) === 'object') {
+    if (typeof(cond) === 'object') {
       if (evaluateCond(cond, questionFields)) {
         if (!condErrorMessage) {
           throw new Error('Schema error: required message_required_if');
